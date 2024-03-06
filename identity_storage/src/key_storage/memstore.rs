@@ -228,6 +228,10 @@ impl JwkMemStore {
   /// SLH-DSA algorithms key types;
   pub const SLH_DSA_KEY_TYPE: KeyType = KeyType::from_static_str(Self::SLH_DSA);
 
+  const FALCON: &'static str = "FALCON";
+  /// FALCON algorithms key types;
+  pub const FALCON_KEY_TYPE: KeyType = KeyType::from_static_str(Self::FALCON);
+
 }
 
 impl MemStoreKeyType {
@@ -551,11 +555,13 @@ impl JwkStoragePQ for JwkMemStore {
         .with_source(err)
     })?;
 
+    let public = jwu::encode_b64(pk.clone().into_vec());
+    let private = jwu::encode_b64(sk.clone().into_vec());
+
+    //TODO: print PK/SK size
+    // println!("PK Size {} bytes - SK Size {} bytes - PK(enc) Size {} bytes - SK(enc) Size {} bytes", pk.clone().into_vec().len(), &sk.clone().into_vec().len(), public.capacity(), private.len());
+
     let kid: KeyId = random_key_id();
-
-    let public = jwu::encode_b64(pk.into_vec());
-    let private = jwu::encode_b64(sk.into_vec());
-
       
     let mut jwk_params = match alg {
       JwsAlgorithm::ML_DSA_44 => JwkParams::new(JwkType::MLDSA),
@@ -587,12 +593,15 @@ impl JwkStoragePQ for JwkMemStore {
       JwkParams::MLDSA(ref mut params) => {
         params.public = public;
         params.private = Some(private);
-      }
+      },
       JwkParams::SLHDSA(ref mut params) => {
         params.public = public;
         params.private = Some(private);
-      }
-      ,
+      },
+      JwkParams::FALCON(ref mut params) => {
+        params.public = public;
+        params.private = Some(private);
+      },
       _ => return Err(
         KeyStorageError::new(KeyStorageErrorKind::UnsupportedKeyType)
           .with_custom_message("Should NOT happen!"),

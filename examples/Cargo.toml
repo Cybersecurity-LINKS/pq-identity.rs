@@ -19,8 +19,15 @@ tokio = { version = "1.29", default-features = false, features = ["rt"] }
 json-proof-token.workspace = true
 identity_pqc_verifier = { path = "../identity_pqc_verifier", default-features = true }
 
+[dev-dependencies]
+criterion = { version = "0.4", features = ["html_reports", "async_tokio"] }
+
 [lib]
 path = "utils/utils.rs"
+
+[[bench]]
+name = "my_benchmark"
+harness = false
 
 [[example]]
 path = "0_basic/0_create_did.rs"
@@ -105,3 +112,11 @@ name = "10_zkp_revocation"
 [[example]]
 path = "1_advanced/11_pqc.rs"
 name = "11_pqc"
+
+[[example]]
+path = "1_advanced/12_pqc_did_create_test.rs"
+name = "12_pqc_did_create_test"
+
+[[example]]
+path = "1_advanced/13_pqc_did_resolve_test.rs"
+name = "13_pqc_did_resolve_test"

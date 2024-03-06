@@ -1,8 +1,7 @@
 
 use std::collections::HashMap;
 
-use examples::get_address_with_funds;
-use examples::random_stronghold_path;
+use examples::*;
 use examples::MemStorage;
 use identity_iota::core::Duration;
 use identity_iota::core::FromJson;
@@ -83,7 +82,6 @@ async fn create_did(client: &Client, secret_manager: &SecretManager, storage: &M
 
   // Publish the Alias Output and get the published DID document.
   let document: IotaDocument = client.publish_did_output(&secret_manager, alias_output).await?;
-  println!("Published DID document: {document:#}");
 
   Ok((address, document, fragment))
 }
@@ -111,7 +109,7 @@ async fn main() -> anyhow::Result<()> {
 
   let (_, issuer_document, fragment_issuer): (Address, IotaDocument, String) = 
   create_did(&client, &mut secret_manager_issuer, &storage_issuer, JwkMemStore::ML_DSA_KEY_TYPE, JwsAlgorithm::ML_DSA_87).await?;
-
+  println!("Published Issuer DID document: {issuer_document:#}");
 
   let mut secret_manager_holder = SecretManager::Stronghold(StrongholdSecretManager::builder()
   .password(Password::from("secure_password_2".to_owned()))
@@ -123,6 +121,7 @@ async fn main() -> anyhow::Result<()> {
   let (_, holder_document, fragment_holder): (Address, IotaDocument, String) = 
   create_did(&client, &mut secret_manager_holder, &storage_holder, JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_128s).await?;
 
+  println!("Published Issuer DID document: {holder_document:#}");
 
   // ======================================================================================
   // Step 2: Issuer creates and signs a Verifiable Credential with a Post-Quantum algorithm.

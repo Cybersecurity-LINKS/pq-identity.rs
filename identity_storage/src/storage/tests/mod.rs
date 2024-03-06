@@ -6,4 +6,5 @@ mod credential_jws;
 mod credential_validation;
 mod kb_jwt;
 mod presentation_validation;
+mod pq_tests;
 pub(crate) mod test_utils;
