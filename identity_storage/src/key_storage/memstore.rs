@@ -5,6 +5,7 @@ use core::fmt::Debug;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::str::FromStr;
+use std::time::Duration;
 
 use async_trait::async_trait;
 use crypto::signatures::ed25519::SecretKey;
@@ -30,6 +31,7 @@ use rand::distributions::DistString;
 use shared::Shared;
 use tokio::sync::RwLockReadGuard;
 use tokio::sync::RwLockWriteGuard;
+use tokio::time::Instant;
 use zkryptium::bbsplus::keys::BBSplusPublicKey;
 use zkryptium::bbsplus::keys::BBSplusSecretKey;
 use zkryptium::schemes::algorithms::BBS_BLS12381_SHA256;
@@ -184,6 +186,8 @@ impl JwkStorage for JwkMemStore {
       .get(key_id)
       .ok_or_else(|| KeyStorageError::new(KeyStorageErrorKind::KeyNotFound))?;
     let secret_key = expand_secret_jwk(jwk)?;
+
+    println!("DATA: {}", data.len());
     Ok(secret_key.sign(data).to_bytes().to_vec())
   }
 
@@ -689,11 +693,14 @@ impl JwkStoragePQ for JwkMemStore {
           .with_custom_message(format!("expected key of length {}", SecretKey::LENGTH))
     )?;
 
+    println!("DATA: {}", data.len());
+
     let signature = scheme.sign(&data, secret_key).map_err(|err| {
       KeyStorageError::new(KeyStorageErrorKind::Unspecified)
         .with_custom_message(format!("signature computation failed"))
         .with_source(err)
     })?;
+
 
     Ok(signature.into_vec())
   }

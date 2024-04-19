@@ -76,13 +76,26 @@ async fn create_did(client: &Client, address: Address, network_name: &NetworkNam
   let mut document: IotaDocument = IotaDocument::new(&network_name);
 
   // New Verification Method containing a PQC key
-  let fragment = document.generate_method(
-    &storage, 
-    key_type, 
-    alg, 
-    None, 
-    MethodScope::VerificationMethod
-  ).await?;
+  let fragment = if alg == JwsAlgorithm::EdDSA && key_type == JwkMemStore::ED25519_KEY_TYPE {
+  
+    document.generate_method(
+        &storage, 
+        key_type, 
+        alg, 
+        None, 
+        MethodScope::VerificationMethod
+    ).await.unwrap()
+
+  } else {
+    document.generate_method_pqc(
+        &storage, 
+        key_type, 
+        alg, 
+        None, 
+        MethodScope::VerificationMethod
+    ).await.unwrap()
+
+  };
 
   // Construct an Alias Output containing the DID document, with the wallet address
   // set as both the state controller and governor.
@@ -126,7 +139,7 @@ async fn main() -> anyhow::Result<()> {
   let network_name: NetworkName = client.network_name().await?;
 
   for _ in 0..100 {
-    let (_, doc, _) = create_did(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::ED25519_KEY_TYPE, JwsAlgorithm::EdDSA).await?;
+    let (_, doc, _) = create_did(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::ML_DSA_KEY_TYPE, JwsAlgorithm::ML_DSA_65).await?;
     // let a = doc.to_json_vec()?;
     // println!("{}", a.len());
   }

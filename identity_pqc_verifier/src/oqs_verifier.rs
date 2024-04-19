@@ -1,5 +1,6 @@
 
 use std::ops::Deref;
+use std::time::Instant;
 use identity_jose::jwk::Jwk;
 use identity_jose::jwk::JwkParamsPQ;
 use identity_jose::jws::SignatureVerificationError;
@@ -47,8 +48,11 @@ impl OQSVerifier {
     let signature = scheme.signature_from_bytes(input.decoded_signature.deref())
         .ok_or(SignatureVerificationErrorKind::InvalidSignature)?;
 
-    Ok(scheme.verify(&input.signing_input, signature, public_key)
-        .map_err(|_| SignatureVerificationErrorKind::InvalidSignature)?)
+    // let t = Instant::now();
+    let result = scheme.verify(&input.signing_input, signature, public_key)
+        .map_err(|_| SignatureVerificationErrorKind::InvalidSignature)?;
 
+    // println!("Time signature: {}", t.elapsed().as_micros());
+    Ok(result)
   }
 }
