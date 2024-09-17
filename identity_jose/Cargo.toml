@@ -21,7 +21,6 @@ serde_json = { version = "1.0", default-features = false, features = ["std"] }
 subtle = { version = "2.5", default-features = false }
 thiserror.workspace = true
 zeroize = { version = "1.6", default-features = false, features = ["std", "zeroize_derive"] }
-json-proof-token.workspace = true
 
 [dev-dependencies]
 anyhow = "1"

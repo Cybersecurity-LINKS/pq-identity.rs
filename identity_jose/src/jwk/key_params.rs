@@ -11,6 +11,7 @@ use crate::jwk::EdCurve;
 use crate::jwk::JwkType;
 
 use super::BlsCurve;
+use super::JwkParamsPQ;
 
 /// Algorithm-specific parameters for JSON Web Keys.
 ///
