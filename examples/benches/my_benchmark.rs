@@ -1,5 +1,6 @@
 
 use std::collections::HashMap;
+use std::io::Seek;
 use std::mem;
 use std::ops::Add;
 use std::process::exit;
@@ -67,6 +68,8 @@ use iota_sdk::types::block::address::Address;
 use iota_sdk::types::block::output::AliasOutput;
 use rand::rngs::mock;
 use serde_json::json;
+use std::fs::OpenOptions;
+use std::io::Write;
 use tokio::runtime::Runtime;
 use tokio::task;
 use tokio::time::Instant;
@@ -375,12 +378,29 @@ fn benchmark_vc_create(c: &mut Criterion) {
 
     let tokio = tokio::runtime::Runtime::new().unwrap();
     let mut group = c.benchmark_group("VC (JWT) Create");
-    group.sample_size(10);
-    group.warm_up_time(Duration::from_secs(3));
+    group.sample_size(1000);
+    group.warm_up_time(Duration::from_nanos(1));
 
     println!("VC size = {}", serde_json::to_vec(&credential).unwrap().len());
     
     let mut jwt: Jwt;
+
+    // Specify the file path
+    let file_path = "signature.txt";
+
+    // Open the file with write mode, create it if it doesn't exist
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(file_path).unwrap();
+
+
+    file.seek(std::io::SeekFrom::End(0)).unwrap();
+    writeln!(file, "Ed25519").unwrap();
+
+    file.flush().unwrap();
+
+    drop(file);
 
     group.bench_function("Ed25519", |b| b.to_async(&tokio).iter(|| async {
         document
@@ -411,7 +431,22 @@ fn benchmark_vc_create(c: &mut Criterion) {
 
 
     let (document, storage, kid, credential) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup(JwkMemStore::ML_DSA_KEY_TYPE, JwsAlgorithm::ML_DSA_44).await });
+    // Specify the file path
+    let file_path = "signature.txt";
 
+    // Open the file with write mode, create it if it doesn't exist
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(file_path).unwrap();
+
+
+    file.seek(std::io::SeekFrom::End(0)).unwrap();
+    writeln!(file, "ML-DSA-44").unwrap();
+
+    file.flush().unwrap();
+
+    drop(file);
     group.bench_function("ML-DSA-44", |b| b.to_async(&tokio).iter(|| async {
         document
         .create_credential_jwt_pqc(
@@ -442,7 +477,22 @@ fn benchmark_vc_create(c: &mut Criterion) {
 
 
     let (document, storage, kid, credential) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup(JwkMemStore::ML_DSA_KEY_TYPE, JwsAlgorithm::ML_DSA_65).await });
+    // Specify the file path
+    let file_path = "signature.txt";
 
+    // Open the file with write mode, create it if it doesn't exist
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(file_path).unwrap();
+
+
+    file.seek(std::io::SeekFrom::End(0)).unwrap();
+    writeln!(file, "ML-DSA-65").unwrap();
+
+    file.flush().unwrap();
+
+    drop(file);
     group.bench_function("ML-DSA-65", |b| b.to_async(&tokio).iter(|| async {
         document
         .create_credential_jwt_pqc(
@@ -471,7 +521,22 @@ fn benchmark_vc_create(c: &mut Criterion) {
     println!("ML-DSA-65 - VC (JWT) size = {}", jwt.as_str().as_bytes().len());
 
     let (document, storage, kid, credential) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup(JwkMemStore::ML_DSA_KEY_TYPE, JwsAlgorithm::ML_DSA_87).await });
+    // Specify the file path
+    let file_path = "signature.txt";
 
+    // Open the file with write mode, create it if it doesn't exist
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(file_path).unwrap();
+
+
+    file.seek(std::io::SeekFrom::End(0)).unwrap();
+    writeln!(file, "ML-DSA-87").unwrap();
+
+    file.flush().unwrap();
+
+    drop(file);
     group.bench_function("ML-DSA-87", |b| b.to_async(&tokio).iter(|| async {
         document
         .create_credential_jwt_pqc(
@@ -500,7 +565,22 @@ fn benchmark_vc_create(c: &mut Criterion) {
     println!("ML-DSA-87 - VC (JWT) size = {}", jwt.as_str().as_bytes().len());
 
     let (document, storage, kid, credential) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_128s).await });
+    // Specify the file path
+    let file_path = "signature.txt";
 
+    // Open the file with write mode, create it if it doesn't exist
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(file_path).unwrap();
+
+
+    file.seek(std::io::SeekFrom::End(0)).unwrap();
+    writeln!(file, "SLH_DSA_SHA2_128s").unwrap();
+
+    file.flush().unwrap();
+
+    drop(file);
     group.bench_function("SLH_DSA_SHA2_128s", |b| b.to_async(&tokio).iter(|| async {
         document
         .create_credential_jwt_pqc(
@@ -529,6 +609,22 @@ fn benchmark_vc_create(c: &mut Criterion) {
     println!("SLH_DSA_SHA2_128s - VC (JWT) size = {}", jwt.as_str().as_bytes().len());
 
     let (document, storage, kid, credential) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_128s).await });
+    
+    // Specify the file path
+    let file_path = "signature.txt";
+
+    // Open the file with write mode, create it if it doesn't exist
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(file_path).unwrap();
+
+    file.seek(std::io::SeekFrom::End(0)).unwrap();
+    writeln!(file, "SLH_DSA_SHAKE_128s").unwrap();
+
+    file.flush().unwrap();
+
+    drop(file);
 
     group.bench_function("SLH_DSA_SHAKE_128s", |b| b.to_async(&tokio).iter(|| async {
         document
@@ -559,6 +655,22 @@ fn benchmark_vc_create(c: &mut Criterion) {
 
     let (document, storage, kid, credential) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_128f).await });
 
+    // Specify the file path
+    let file_path = "signature.txt";
+
+    // Open the file with write mode, create it if it doesn't exist
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(file_path).unwrap();
+    
+    file.seek(std::io::SeekFrom::End(0)).unwrap();
+    writeln!(file, "SLH_DSA_SHA2_128f").unwrap();
+
+    file.flush().unwrap();
+
+    drop(file);
+
     group.bench_function("SLH_DSA_SHA2_128f", |b| b.to_async(&tokio).iter(|| async {
         document
         .create_credential_jwt_pqc(
@@ -587,6 +699,21 @@ fn benchmark_vc_create(c: &mut Criterion) {
     println!("SLH_DSA_SHA2_128f - VC (JWT) size = {}", jwt.as_str().as_bytes().len());
 
     let (document, storage, kid, credential) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_128f).await });
+
+    // Specify the file path
+    let file_path = "signature.txt";
+
+    // Open the file with write mode, create it if it doesn't exist
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(file_path).unwrap();
+    file.seek(std::io::SeekFrom::End(0)).unwrap();
+    writeln!(file, "SLH_DSA_SHAKE_128f").unwrap();
+
+    file.flush().unwrap();
+
+    drop(file);
 
     group.bench_function("SLH_DSA_SHAKE_128f", |b| b.to_async(&tokio).iter(|| async {
         document
@@ -617,6 +744,21 @@ fn benchmark_vc_create(c: &mut Criterion) {
 
     let (document, storage, kid, credential) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_192s).await });
 
+    // Specify the file path
+    let file_path = "signature.txt";
+
+    // Open the file with write mode, create it if it doesn't exist
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(file_path).unwrap();
+    file.seek(std::io::SeekFrom::End(0)).unwrap();
+    writeln!(file, "SLH_DSA_SHA2_192s").unwrap();
+
+    file.flush().unwrap();
+
+    drop(file);
+
     group.bench_function("SLH_DSA_SHA2_192s", |b| b.to_async(&tokio).iter(|| async {
         document
         .create_credential_jwt_pqc(
@@ -645,6 +787,22 @@ fn benchmark_vc_create(c: &mut Criterion) {
     println!("SLH_DSA_SHA2_192s - VC (JWT) size = {}", jwt.as_str().as_bytes().len());
 
     let (document, storage, kid, credential) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_192s).await });
+
+    // Specify the file path
+    let file_path = "signature.txt";
+
+    // Open the file with write mode, create it if it doesn't exist
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(file_path).unwrap();
+    
+    file.seek(std::io::SeekFrom::End(0)).unwrap();
+    writeln!(file, "SLH_DSA_SHAKE_192s").unwrap();
+
+    file.flush().unwrap();
+
+    drop(file);
 
     group.bench_function("SLH_DSA_SHAKE_192s", |b| b.to_async(&tokio).iter(|| async {
         document
@@ -675,6 +833,22 @@ fn benchmark_vc_create(c: &mut Criterion) {
 
     let (document, storage, kid, credential) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_192f).await });
 
+    // Specify the file path
+    let file_path = "signature.txt";
+
+    // Open the file with write mode, create it if it doesn't exist
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(file_path).unwrap();
+    
+    file.seek(std::io::SeekFrom::End(0)).unwrap();
+    writeln!(file, "SLH_DSA_SHA2_192f").unwrap();
+
+    file.flush().unwrap();
+
+    drop(file);
+
     group.bench_function("SLH_DSA_SHA2_192f", |b| b.to_async(&tokio).iter(|| async {
         document
         .create_credential_jwt_pqc(
@@ -703,6 +877,22 @@ fn benchmark_vc_create(c: &mut Criterion) {
     println!("SLH_DSA_SHA2_192f - VC (JWT) size = {}", jwt.as_str().as_bytes().len());
 
     let (document, storage, kid, credential) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_192f).await });
+
+    // Specify the file path
+    let file_path = "signature.txt";
+
+    // Open the file with write mode, create it if it doesn't exist
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(file_path).unwrap();
+
+    file.seek(std::io::SeekFrom::End(0)).unwrap();
+    writeln!(file, "SLH_DSA_SHAKE_192f").unwrap();
+
+    file.flush().unwrap();
+
+    drop(file);
 
     group.bench_function("SLH_DSA_SHAKE_192f", |b| b.to_async(&tokio).iter(|| async {
         document
@@ -733,6 +923,22 @@ fn benchmark_vc_create(c: &mut Criterion) {
 
     let (document, storage, kid, credential) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_256s).await });
 
+    // Specify the file path
+    let file_path = "signature.txt";
+
+    // Open the file with write mode, create it if it doesn't exist
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(file_path).unwrap();
+    
+    file.seek(std::io::SeekFrom::End(0)).unwrap();
+    writeln!(file, "SLH_DSA_SHA2_256s").unwrap();
+
+    file.flush().unwrap();
+
+    drop(file);
+
     group.bench_function("SLH_DSA_SHA2_256s", |b| b.to_async(&tokio).iter(|| async {
         document
         .create_credential_jwt_pqc(
@@ -762,6 +968,22 @@ fn benchmark_vc_create(c: &mut Criterion) {
 
     let (document, storage, kid, credential) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_256s).await });
 
+    // Specify the file path
+    let file_path = "signature.txt";
+
+    // Open the file with write mode, create it if it doesn't exist
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(file_path).unwrap();
+    
+    file.seek(std::io::SeekFrom::End(0)).unwrap();
+    writeln!(file, "SLH_DSA_SHAKE_256s").unwrap();
+
+    file.flush().unwrap();
+
+    drop(file);
+
     group.bench_function("SLH_DSA_SHAKE_256s", |b| b.to_async(&tokio).iter(|| async {
         document
         .create_credential_jwt_pqc(
@@ -790,6 +1012,22 @@ fn benchmark_vc_create(c: &mut Criterion) {
     println!("SLH_DSA_SHAKE_256s - VC (JWT) size = {}", jwt.as_str().as_bytes().len());
 
     let (document, storage, kid, credential) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_256f).await });
+
+    // Specify the file path
+    let file_path = "signature.txt";
+
+    // Open the file with write mode, create it if it doesn't exist
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(file_path).unwrap();
+    
+    file.seek(std::io::SeekFrom::End(0)).unwrap();
+    writeln!(file, "SLH_DSA_SHA2_256f").unwrap();
+
+    file.flush().unwrap();
+
+    drop(file);
 
     group.bench_function("SLH_DSA_SHA2_256f", |b| b.to_async(&tokio).iter(|| async {
         document
@@ -821,6 +1059,23 @@ fn benchmark_vc_create(c: &mut Criterion) {
 
     let (document, storage, kid, credential) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_256f).await });
 
+    // Specify the file path
+    let file_path = "signature.txt";
+
+    // Open the file with write mode, create it if it doesn't exist
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(file_path).unwrap();
+    
+
+    file.seek(std::io::SeekFrom::End(0)).unwrap();
+    writeln!(file, "SLH_DSA_SHAKE_256f").unwrap();
+
+    file.flush().unwrap();
+
+    drop(file);
+
     group.bench_function("SLH_DSA_SHAKE_256f", |b| b.to_async(&tokio).iter(|| async {
         document
         .create_credential_jwt_pqc(
@@ -849,7 +1104,22 @@ fn benchmark_vc_create(c: &mut Criterion) {
     println!("SLH_DSA_SHAKE_256f - VC (JWT) size = {}", jwt.as_str().as_bytes().len());
 
     let (document, storage, kid, credential) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup(JwkMemStore::FALCON_KEY_TYPE, JwsAlgorithm::FALCON512).await });
+    // Specify the file path
+    let file_path = "signature.txt";
 
+    // Open the file with write mode, create it if it doesn't exist
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(file_path).unwrap();
+    
+
+    file.seek(std::io::SeekFrom::End(0)).unwrap();
+    writeln!(file, "FALCON512").unwrap();
+
+    file.flush().unwrap();
+
+    drop(file);
     group.bench_function("FALCON512", |b| b.to_async(&tokio).iter(|| async {
         document
         .create_credential_jwt_pqc(
@@ -878,7 +1148,22 @@ fn benchmark_vc_create(c: &mut Criterion) {
     println!("FALCON512 - VC (JWT) size = {}", jwt.as_str().as_bytes().len());
 
     let (document, storage, kid, credential) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup(JwkMemStore::FALCON_KEY_TYPE, JwsAlgorithm::FALCON1024).await });
+    // Specify the file path
+    let file_path = "signature.txt";
 
+    // Open the file with write mode, create it if it doesn't exist
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(file_path).unwrap();
+
+
+    file.seek(std::io::SeekFrom::End(0)).unwrap();
+    writeln!(file, "FALCON1024").unwrap();
+
+    file.flush().unwrap();
+
+    drop(file);
     group.bench_function("FALCON1024", |b| b.to_async(&tokio).iter(|| async {
         document
         .create_credential_jwt_pqc(
@@ -913,7 +1198,7 @@ fn benchmark_vc_create(c: &mut Criterion) {
 
 
 
-async fn setup_presentation(key_type: KeyType, alg: JwsAlgorithm) -> (CoreDocument, MemStorage, MemStorage, String, CoreDocument, String, Presentation<Jwt>, Client) {
+async fn setup_presentation(key_type: KeyType, alg: JwsAlgorithm) -> (CoreDocument, MemStorage, MemStorage, String, CoreDocument, String, Presentation<Jwt>, Client, Jwt) {
   let client: Client = Client::builder()
   .with_primary_node(API_ENDPOINT, None).unwrap()
   .finish()
@@ -1041,7 +1326,7 @@ async fn setup_presentation(key_type: KeyType, alg: JwsAlgorithm) -> (CoreDocume
 
 
 
-  (mock_document.into(), storage, holder_storage, method_fragment, holder_document.into(), holder_fragment,presentation, client)
+  (mock_document.into(), storage, holder_storage, method_fragment, holder_document.into(), holder_fragment,presentation, client, vc_jwt)
 }
 
 
@@ -1058,8 +1343,8 @@ fn benchmark_vp_create(c: &mut Criterion) {
 
   let tokio = tokio::runtime::Runtime::new().unwrap();
   let mut group = c.benchmark_group("VP (JWT) Create");
-  group.sample_size(10);
-  group.warm_up_time(Duration::from_secs(3));
+  group.sample_size(1000);
+  group.warm_up_time(Duration::from_secs(20));
 
   println!("VP size = {}", serde_json::to_vec(&presentation).unwrap().len());
   
@@ -1094,7 +1379,7 @@ fn benchmark_vp_create(c: &mut Criterion) {
   // println!("Ed25519 - VP (JWT) size = {}", jwt.as_str().as_bytes().len());
 
 
-  // let (document, storage, kid, presentation) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::ML_DSA_KEY_TYPE, JwsAlgorithm::ML_DSA_44).await });
+  // let (document, storage, _, kid, _, _, presentation, _) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::ML_DSA_KEY_TYPE, JwsAlgorithm::ML_DSA_44).await });
 
   // group.bench_function("ML-DSA-44", |b| b.to_async(&tokio).iter(|| async {
   //   document
@@ -1125,7 +1410,7 @@ fn benchmark_vp_create(c: &mut Criterion) {
   // println!("ML-DSA-44 - VP (JWT) size = {}", jwt.as_str().as_bytes().len());
 
 
-  // let (document, storage, kid, presentation) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::ML_DSA_KEY_TYPE, JwsAlgorithm::ML_DSA_65).await });
+  // let (document, storage, _, kid, _, _, presentation, _) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::ML_DSA_KEY_TYPE, JwsAlgorithm::ML_DSA_65).await });
 
   // group.bench_function("ML-DSA-65", |b| b.to_async(&tokio).iter(|| async {
   //   document
@@ -1154,7 +1439,7 @@ fn benchmark_vp_create(c: &mut Criterion) {
 
   // println!("ML-DSA-65 - VP (JWT) size = {}", jwt.as_str().as_bytes().len());
 
-  // let (document, storage, kid, presentation) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::ML_DSA_KEY_TYPE, JwsAlgorithm::ML_DSA_87).await });
+  // let (document, storage, _, kid, _, _, presentation, _) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::ML_DSA_KEY_TYPE, JwsAlgorithm::ML_DSA_87).await });
 
   // group.bench_function("ML-DSA-87", |b| b.to_async(&tokio).iter(|| async {
   //   document
@@ -1183,7 +1468,7 @@ fn benchmark_vp_create(c: &mut Criterion) {
 
   // println!("ML-DSA-87 - VP (JWT) size = {}", jwt.as_str().as_bytes().len());
 
-  let (document, storage, _, kid, _, _, presentation, _) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_128s).await });
+  // let (document, storage, _, kid, _, _, presentation, _) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_128s).await });
 
   // group.bench_function("SLH_DSA_SHA2_128s", |b| b.to_async(&tokio).iter(|| async {
   //   document
@@ -1198,22 +1483,22 @@ fn benchmark_vp_create(c: &mut Criterion) {
   //     }
   // ));
 
-  jwt = tokio::runtime::Runtime::new().unwrap().block_on(async {document
-    .create_presentation_jwt_pqc(
-      &presentation,
-      &storage,
-      &kid,
-      &JwsSignatureOptions::default().nonce(challenge.to_owned()),
-      &JwtPresentationOptions::default().expiration_date(expires),
-    )
-    .await.unwrap()
-  });
+  // jwt = tokio::runtime::Runtime::new().unwrap().block_on(async {document
+  //   .create_presentation_jwt_pqc(
+  //     &presentation,
+  //     &storage,
+  //     &kid,
+  //     &JwsSignatureOptions::default().nonce(challenge.to_owned()),
+  //     &JwtPresentationOptions::default().expiration_date(expires),
+  //   )
+  //   .await.unwrap()
+  // });
 
-  println!("T = {}", jwt.as_str());
+  // println!("T = {}", jwt.as_str());
 
   // println!("SLH_DSA_SHA2_128s - VP (JWT) size = {}", jwt.as_str().as_bytes().len());
 
-  let (document, storage, _, kid, _, _, presentation, _) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_128s).await });
+  // let (document, storage, _, kid, _, _, presentation, _) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_128s).await });
 
   // group.bench_function("SLH_DSA_SHAKE_128s", |b| b.to_async(&tokio).iter(|| async {
   //   document
@@ -1229,22 +1514,22 @@ fn benchmark_vp_create(c: &mut Criterion) {
   //     }
   // ));
 
-  jwt = tokio::runtime::Runtime::new().unwrap().block_on(async {document
-    .create_presentation_jwt_pqc(
-      &presentation,
-      &storage,
-      &kid,
-      &JwsSignatureOptions::default().nonce(challenge.to_owned()),
-      &JwtPresentationOptions::default().expiration_date(expires),
-    )
-    .await.unwrap()
-  });
+  // jwt = tokio::runtime::Runtime::new().unwrap().block_on(async {document
+  //   .create_presentation_jwt_pqc(
+  //     &presentation,
+  //     &storage,
+  //     &kid,
+  //     &JwsSignatureOptions::default().nonce(challenge.to_owned()),
+  //     &JwtPresentationOptions::default().expiration_date(expires),
+  //   )
+  //   .await.unwrap()
+  // });
 
-  println!("T = {}", jwt.as_str());
+  // println!("T = {}", jwt.as_str());
 
   // println!("SLH_DSA_SHAKE_128s - VP (JWT) size = {}", jwt.as_str().as_bytes().len());
 
-  // let (document, storage, kid, presentation) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_128f).await });
+  // let (document, storage, _, kid, _, _, presentation, _) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_128f).await });
 
   // group.bench_function("SLH_DSA_SHA2_128f", |b| b.to_async(&tokio).iter(|| async {
   //   document
@@ -1272,7 +1557,7 @@ fn benchmark_vp_create(c: &mut Criterion) {
 
   // println!("SLH_DSA_SHA2_128f - VP (JWT) size = {}", jwt.as_str().as_bytes().len());
 
-  // let (document, storage, kid, presentation) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_128f).await });
+  // let (document, storage, _, kid, _, _, presentation, _) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_128f).await });
 
   // group.bench_function("SLH_DSA_SHAKE_128f", |b| b.to_async(&tokio).iter(|| async {
   //   document
@@ -1300,35 +1585,35 @@ fn benchmark_vp_create(c: &mut Criterion) {
 
   // println!("SLH_DSA_SHAKE_128f - VP (JWT) size = {}", jwt.as_str().as_bytes().len());
 
-  let (document, storage, _, kid, _, _, presentation, _) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_192s).await });
+  // let (document, storage, _, kid, _, _, presentation, _) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_192s).await });
 
-  group.bench_function("SLH_DSA_SHA2_192s", |b| b.to_async(&tokio).iter(|| async {
-    document
-    .create_presentation_jwt_pqc(
-      &presentation,
-      &storage,
-      &kid,
-      &JwsSignatureOptions::default().nonce(challenge.to_owned()),
-      &JwtPresentationOptions::default().expiration_date(expires),
-    )
-    .await.unwrap()
-      }
-  ));
+  // group.bench_function("SLH_DSA_SHA2_192s", |b| b.to_async(&tokio).iter(|| async {
+  //   document
+  //   .create_presentation_jwt_pqc(
+  //     &presentation,
+  //     &storage,
+  //     &kid,
+  //     &JwsSignatureOptions::default().nonce(challenge.to_owned()),
+  //     &JwtPresentationOptions::default().expiration_date(expires),
+  //   )
+  //   .await.unwrap()
+  //     }
+  // ));
 
-  jwt = tokio::runtime::Runtime::new().unwrap().block_on(async {document
-    .create_presentation_jwt_pqc(
-      &presentation,
-      &storage,
-      &kid,
-      &JwsSignatureOptions::default().nonce(challenge.to_owned()),
-      &JwtPresentationOptions::default().expiration_date(expires),
-    )
-    .await.unwrap()
-  });
+  // jwt = tokio::runtime::Runtime::new().unwrap().block_on(async {document
+  //   .create_presentation_jwt_pqc(
+  //     &presentation,
+  //     &storage,
+  //     &kid,
+  //     &JwsSignatureOptions::default().nonce(challenge.to_owned()),
+  //     &JwtPresentationOptions::default().expiration_date(expires),
+  //   )
+  //   .await.unwrap()
+  // });
 
-  println!("SLH_DSA_SHA2_192s - VP (JWT) size = {}", jwt.as_str().as_bytes().len());
+  // println!("SLH_DSA_SHA2_192s - VP (JWT) size = {}", jwt.as_str().as_bytes().len());
 
-  // let (document, storage, kid, presentation) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_192s).await });
+  // let (document, storage, _, kid, _, _, presentation, _) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_192s).await });
 
   // group.bench_function("SLH_DSA_SHAKE_192s", |b| b.to_async(&tokio).iter(|| async {
   //   document
@@ -1356,7 +1641,7 @@ fn benchmark_vp_create(c: &mut Criterion) {
 
   // println!("SLH_DSA_SHAKE_192s - VP (JWT) size = {}", jwt.as_str().as_bytes().len());
 
-  // let (document, storage, kid, presentation) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_192f).await });
+  // let (document, storage, _, kid, _, _, presentation, _) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_192f).await });
 
   // group.bench_function("SLH_DSA_SHA2_192f", |b| b.to_async(&tokio).iter(|| async {
   //   document
@@ -1385,7 +1670,7 @@ fn benchmark_vp_create(c: &mut Criterion) {
 
   // println!("SLH_DSA_SHA2_192f - VP (JWT) size = {}", jwt.as_str().as_bytes().len());
 
-  // let (document, storage, kid, presentation) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_192f).await });
+  // let (document, storage, _, kid, _, _, presentation, _) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_192f).await });
 
   // group.bench_function("SLH_DSA_SHAKE_192f", |b| b.to_async(&tokio).iter(|| async {
   //   document
@@ -1414,38 +1699,9 @@ fn benchmark_vp_create(c: &mut Criterion) {
 
   // println!("SLH_DSA_SHAKE_192f - VP (JWT) size = {}", jwt.as_str().as_bytes().len());
 
-  let (document, storage, _, kid, _, _, presentation, _) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_256s).await });
+  // let (document, storage, _, kid, _, _, presentation, _) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_256s).await });
 
-  group.bench_function("SLH_DSA_SHA2_256s", |b| b.to_async(&tokio).iter(|| async {
-    document
-    .create_presentation_jwt_pqc(
-      &presentation,
-      &storage,
-      &kid,
-      &JwsSignatureOptions::default().nonce(challenge.to_owned()),
-      &JwtPresentationOptions::default().expiration_date(expires),
-    )
-    .await.unwrap()
-
-      }
-  ));
-
-  jwt = tokio::runtime::Runtime::new().unwrap().block_on(async {document
-    .create_presentation_jwt_pqc(
-      &presentation,
-      &storage,
-      &kid,
-      &JwsSignatureOptions::default().nonce(challenge.to_owned()),
-      &JwtPresentationOptions::default().expiration_date(expires),
-    )
-    .await.unwrap()
-  });
-
-  println!("SLH_DSA_SHA2_256s - VP (JWT) size = {}", jwt.as_str().as_bytes().len());
-
-  // let (document, storage, kid, presentation) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_256s).await });
-
-  // group.bench_function("SLH_DSA_SHAKE_256s", |b| b.to_async(&tokio).iter(|| async {
+  // group.bench_function("SLH_DSA_SHA2_256s", |b| b.to_async(&tokio).iter(|| async {
   //   document
   //   .create_presentation_jwt_pqc(
   //     &presentation,
@@ -1455,6 +1711,7 @@ fn benchmark_vp_create(c: &mut Criterion) {
   //     &JwtPresentationOptions::default().expiration_date(expires),
   //   )
   //   .await.unwrap()
+
   //     }
   // ));
 
@@ -1469,9 +1726,37 @@ fn benchmark_vp_create(c: &mut Criterion) {
   //   .await.unwrap()
   // });
 
-  // println!("SLH_DSA_SHAKE_256s - VP (JWT) size = {}", jwt.as_str().as_bytes().len());
+  // println!("SLH_DSA_SHA2_256s - VP (JWT) size = {}", jwt.as_str().as_bytes().len());
 
-  // let (document, storage, kid, presentation) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_256f).await });
+  let (document, storage, _, kid, _, _, presentation, _) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_256s).await });
+
+  group.bench_function("SLH_DSA_SHAKE_256s", |b| b.to_async(&tokio).iter(|| async {
+    document
+    .create_presentation_jwt_pqc(
+      &presentation,
+      &storage,
+      &kid,
+      &JwsSignatureOptions::default().nonce(challenge.to_owned()),
+      &JwtPresentationOptions::default().expiration_date(expires),
+    )
+    .await.unwrap()
+      }
+  ));
+
+  jwt = tokio::runtime::Runtime::new().unwrap().block_on(async {document
+    .create_presentation_jwt_pqc(
+      &presentation,
+      &storage,
+      &kid,
+      &JwsSignatureOptions::default().nonce(challenge.to_owned()),
+      &JwtPresentationOptions::default().expiration_date(expires),
+    )
+    .await.unwrap()
+  });
+
+  println!("SLH_DSA_SHAKE_256s - VP (JWT) size = {}", jwt.as_str().as_bytes().len());
+
+  // let (document, storage, _, kid, _, _, presentation, _) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_256f).await });
 
   // group.bench_function("SLH_DSA_SHA2_256f", |b| b.to_async(&tokio).iter(|| async {
   //   document
@@ -1500,7 +1785,7 @@ fn benchmark_vp_create(c: &mut Criterion) {
   // println!("SLH_DSA_SHA2_256f- VP (JWT) size = {}", jwt.as_str().as_bytes().len());
 
 
-  // let (document, storage, kid, presentation) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_256f).await });
+  // let (document, storage, _, kid, _, _, presentation, _) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_256f).await });
 
   // group.bench_function("SLH_DSA_SHAKE_256f", |b| b.to_async(&tokio).iter(|| async {
   //   document
@@ -1528,7 +1813,7 @@ fn benchmark_vp_create(c: &mut Criterion) {
 
   // println!("SLH_DSA_SHAKE_256f - VP (JWT) size = {}", jwt.as_str().as_bytes().len());
 
-  // let (document, storage, kid, presentation) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::FALCON_KEY_TYPE, JwsAlgorithm::FALCON512).await });
+  // let (document, storage, _, kid, _, _, presentation, _) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::FALCON_KEY_TYPE, JwsAlgorithm::FALCON512).await });
 
   // group.bench_function("FALCON512", |b| b.to_async(&tokio).iter(|| async {
   //   document
@@ -1556,7 +1841,7 @@ fn benchmark_vp_create(c: &mut Criterion) {
 
   // println!("FALCON512 - VP (JWT) size = {}", jwt.as_str().as_bytes().len());
 
-  // let (document, storage, kid, presentation) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::FALCON_KEY_TYPE, JwsAlgorithm::FALCON1024).await });
+  // let (document, storage, _, kid, _, _, presentation, _) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::FALCON_KEY_TYPE, JwsAlgorithm::FALCON1024).await });
 
   // group.bench_function("FALCON1024", |b| b.to_async(&tokio).iter(|| async {
   //   document
@@ -1682,13 +1967,13 @@ fn benchmark_vp_verify(c: &mut Criterion) {
 
 }
 
-fn benchmark_vp_verify_pq(c: &mut Criterion) {
+fn benchmark_vc_verify_pq(c: &mut Criterion) {
 
 
   let tokio = tokio::runtime::Runtime::new().unwrap();
-  let mut group = c.benchmark_group("VP (JWT) Verify");
+  let mut group = c.benchmark_group("VC (JWT) Verify");
   group.sample_size(1000);
-  group.warm_up_time(Duration::from_secs(3));
+  group.warm_up_time(Duration::from_secs(20));
 
 
   let (document, storage, fragment, holder_document, holder_fragment, presentation, client, presentation_jwt, challenge, expires) = tokio::runtime::Runtime::new().unwrap().block_on(async { 
@@ -1696,7 +1981,7 @@ fn benchmark_vp_verify_pq(c: &mut Criterion) {
     let alg = JwsAlgorithm::EdDSA;
     
     let (document, storage, holder_storage, fragment, holder_document, holder_fragment, presentation, client) = 
-    setup_presentation(key_type.clone(), alg).await;
+    credentia(key_type.clone(), alg).await;
 
     // A unique random challenge generated by the requester per presentation can mitigate replay attacks.
     let challenge: &str = "475a7984-1bb5-4c4c-a56f-822bccd46440";
@@ -1712,6 +1997,47 @@ fn benchmark_vp_verify_pq(c: &mut Criterion) {
 
   println!("VP size = {}", serde_json::to_vec(&presentation).unwrap().len());
 
+
+  group.bench_function("Ed25519", |b| b.to_async(&tokio).iter(|| async {
+      vp_verify(challenge, &document, &holder_document, &presentation_jwt).await;
+      }
+  ));
+}
+
+fn benchmark_vp_verify_pq(c: &mut Criterion) {
+
+
+  let tokio = tokio::runtime::Runtime::new().unwrap();
+  let mut group = c.benchmark_group("VP (JWT) Verify");
+  group.sample_size(1000);
+  group.warm_up_time(Duration::from_secs(20));
+
+
+  let (document, storage, fragment, holder_document, holder_fragment, presentation, client, presentation_jwt, challenge, expires) = tokio::runtime::Runtime::new().unwrap().block_on(async { 
+    let key_type = JwkMemStore::ED25519_KEY_TYPE;
+    let alg = JwsAlgorithm::EdDSA;
+    
+    let (document, storage, holder_storage, fragment, holder_document, holder_fragment, presentation, client, cv) = 
+    setup_presentation(key_type.clone(), alg).await;
+
+    // A unique random challenge generated by the requester per presentation can mitigate replay attacks.
+    let challenge: &str = "475a7984-1bb5-4c4c-a56f-822bccd46440";
+
+    // The verifier and holder also agree that the signature should have an expiry date
+    // 10 minutes from now.
+    let expires: Timestamp = Timestamp::now_utc().checked_add(Dur::minutes(10)).unwrap();
+    
+    let presentation_jwt = holder_document.create_presentation_jwt(&presentation, &holder_storage, &holder_fragment, &JwsSignatureOptions::default().nonce(challenge.to_owned()),
+    &JwtPresentationOptions::default().expiration_date(expires)).await.unwrap();
+    (document, storage, fragment, holder_document.into(), holder_fragment, presentation, client, presentation_jwt, challenge, expires, vc)
+  });
+
+  println!("VP size = {}", serde_json::to_vec(&presentation).unwrap().len());
+
+  group.bench_function("Ed25519", |b| b.to_async(&tokio).iter(|| async {
+      vc_verify(challenge, &document, &holder_document, &presentation_jwt).await;
+      }
+));
 
   group.bench_function("Ed25519", |b| b.to_async(&tokio).iter(|| async {
       vp_verify(challenge, &document, &holder_document, &presentation_jwt).await;
@@ -2290,6 +2616,8 @@ criterion_group!(vp_create_benches, benchmark_vp_create);
 
 criterion_group!(vc_create_benches, benchmark_vc_create);
 
+criterion_group!(vc_vp_create_benches, benchmark_vc_create, benchmark_vp_create, benchmark_vp_verify_pq);
+
 criterion_group!(benches, criterion_benchmark, benchmark_vc_create);
 
-criterion_main!(vp_verify_benches);
+criterion_main!(vp_create_benches);

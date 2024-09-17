@@ -37,6 +37,7 @@ use identity_iota::iota::NetworkName;
 use identity_iota::resolver::Resolver;
 use identity_iota::storage::JwkDocumentExt;
 use identity_iota::storage::JwkMemStore;
+use identity_iota::storage::JwpDocumentExt;
 use identity_iota::storage::JwsDocumentExtPQC;
 use identity_iota::storage::JwsSignatureOptions;
 use identity_iota::storage::KeyIdMemstore;
@@ -50,12 +51,14 @@ use iota_sdk::client::Client;
 use iota_sdk::client::Password;
 use iota_sdk::types::block::address::Address;
 use iota_sdk::types::block::output::AliasOutput;
+use jsonprooftoken::jpa::algs::ProofAlgorithm;
 use serde_json::json;
 use tokio::time::Instant;
 use tokio::try_join;
 
 // The API endpoint of an IOTA node, e.g. Hornet.
-const API_ENDPOINT: &str = "http://192.168.94.191";
+// const API_ENDPOINT: &str = "http://192.168.94.191";
+const API_ENDPOINT: &str = "https://api.testnet.shimmer.network";
 // The faucet endpoint allows requesting funds for testing purposes.
 const FAUCET_ENDPOINT: &str = "http://faucet.testnet.shimmer.network/api/enqueue";
 
@@ -112,6 +115,52 @@ async fn create_did(client: &Client, address: Address, network_name: &NetworkNam
 }
 
 
+
+// async fn create_did_zk(client: &Client, address: Address, network_name: &NetworkName, secret_manager: &SecretManager, storage: &MemStorage, key_type: KeyType, alg: ProofAlgorithm) -> anyhow::Result<(Address, IotaDocument, String)> {
+
+//   let start_time = Instant::now();
+  
+//   // Create a new DID document with a placeholder DID.
+//   // The DID will be derived from the Alias Id of the Alias Output after publishing.
+//   let mut document: IotaDocument = IotaDocument::new(&network_name);
+
+//   // New Verification Method containing a PQC key
+//   let fragment = if alg == JwsAlgorithm::EdDSA && key_type == JwkMemStore::ED25519_KEY_TYPE {
+  
+//     document.generate_method_jwp(
+//         &storage, 
+//         key_type, 
+//         alg, 
+//         None, 
+//         MethodScope::VerificationMethod
+//     ).await.unwrap()
+
+//   } else {
+//     document.generate_method_pqc(
+//         &storage, 
+//         key_type, 
+//         alg, 
+//         None, 
+//         MethodScope::VerificationMethod
+//     ).await.unwrap()
+
+//   };
+
+//   // Construct an Alias Output containing the DID document, with the wallet address
+//   // set as both the state controller and governor.
+//   let alias_output: AliasOutput = client.new_did_output(address, document, None).await?;
+
+//   // Publish the Alias Output and get the published DID document.
+//   let document: IotaDocument = client.publish_did_output(&secret_manager, alias_output).await?;
+
+//   let elapsed_time = start_time.elapsed();
+
+//   println!("Time elapsed: {} ms", elapsed_time.as_millis());
+
+//   Ok((address, document, fragment))
+// }
+
+
 /// Demonstrates how to create a Post-Quantum Verifiable Credential.
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -138,12 +187,166 @@ async fn main() -> anyhow::Result<()> {
   // Get the Bech32 human-readable part (HRP) of the network.
   let network_name: NetworkName = client.network_name().await?;
 
-  for _ in 0..100 {
-    let (_, doc, _) = create_did(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::ML_DSA_KEY_TYPE, JwsAlgorithm::ML_DSA_65).await?;
-    // let a = doc.to_json_vec()?;
-    // println!("{}", a.len());
+  let n = 1;
+  let printing = false;
+
+  println!("ML-DSA-44\n");
+  for _ in 0..n {
+    let (_, doc, _) = create_did(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::ML_DSA_KEY_TYPE, JwsAlgorithm::ML_DSA_44).await?;
+    if printing {
+      let a = doc.to_json_vec()?;
+      println!("{}", a.len());
+    }
   }
 
+  println!("ML-DSA-65\n");
+  for _ in 0..n {
+    let (_, doc, _) = create_did(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::ML_DSA_KEY_TYPE, JwsAlgorithm::ML_DSA_65).await?;
+    if printing {
+      let a = doc.to_json_vec()?;
+      println!("{}", a.len());
+    }
+  }
+
+  println!("ML-DSA-87\n");
+  for _ in 0..n {
+    let (_, doc, _) = create_did(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::ML_DSA_KEY_TYPE, JwsAlgorithm::ML_DSA_87).await?;
+    if printing {
+      let a = doc.to_json_vec()?;
+      println!("{}", a.len());
+    }
+  }
+
+  println!("SLH-DSA-SHA2-128s\n");
+  for _ in 0..n {
+    let (_, doc, _) = create_did(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_128s).await?;
+    if printing {
+      let a = doc.to_json_vec()?;
+      println!("{}", a.len());
+    }
+  }
+
+  println!("SLH-DSA-SHAKE-128s\n");
+  for _ in 0..n {
+    let (_, doc, _) = create_did(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_128s).await?;
+    if printing {
+      let a = doc.to_json_vec()?;
+      println!("{}", a.len());
+    }
+  }
+
+  println!("SLH-DSA-SHA2-128f\n");
+  for _ in 0..n {
+    let (_, doc, _) = create_did(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_128f).await?;
+    if printing {
+      let a = doc.to_json_vec()?;
+      println!("{}", a.len());
+    }
+  }
+
+  println!("SLH-DSA-SHAKE-128f\n");
+  for _ in 0..n {
+    let (_, doc, _) = create_did(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_128f).await?;
+    if printing {
+      let a = doc.to_json_vec()?;
+      println!("{}", a.len());
+    }
+  }
+
+
+  println!("SLH-DSA-SHA2-192s\n");
+  for _ in 0..n {
+    let (_, doc, _) = create_did(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_192s).await?;
+    if printing {
+      let a = doc.to_json_vec()?;
+      println!("{}", a.len());
+    }
+  }
+
+
+  println!("SLH-DSA-SHAKE-192s\n");
+  for _ in 0..n {
+    let (_, doc, _) = create_did(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_192s).await?;
+    if printing {
+      let a = doc.to_json_vec()?;
+      println!("{}", a.len());
+    }
+  }
+
+
+  println!("SLH-DSA-SHA2-192f\n");
+  for _ in 0..n {
+    let (_, doc, _) = create_did(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_192f).await?;
+    if printing {
+      let a = doc.to_json_vec()?;
+      println!("{}", a.len());
+    }
+  }
+
+  println!("SLH-DSA-SHAKE-192f\n");
+  for _ in 0..n {
+    let (_, doc, _) = create_did(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_192f).await?;
+    if printing {
+      let a = doc.to_json_vec()?;
+      println!("{}", a.len());
+    }
+  }
+
+
+  println!("SLH-DSA-SHA2-256s\n");
+  for _ in 0..n {
+    let (_, doc, _) = create_did(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_256s).await?;
+    if printing {
+      let a = doc.to_json_vec()?;
+      println!("{}", a.len());
+    }
+  }
+
+  println!("SLH-DSA-SHAKE-256s\n");
+  for _ in 0..n {
+    let (_, doc, _) = create_did(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_256s).await?;
+    if printing {
+      let a = doc.to_json_vec()?;
+      println!("{}", a.len());
+    }
+  }
+
+  println!("SLH-DSA-SHA2-256f\n");
+  for _ in 0..n {
+    let (_, doc, _) = create_did(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_256f).await?;
+    if printing {
+      let a = doc.to_json_vec()?;
+      println!("{}", a.len());
+    }
+  }
+
+  println!("SLH-DSA-SHAKE-256f\n");
+  for _ in 0..n {
+    let (_, doc, _) = create_did(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_256f).await?;
+    if printing {
+      let a = doc.to_json_vec()?;
+      println!("{}", a.len());
+    }
+  }
+
+
+  println!("FALCON512\n");
+  for _ in 0..n {
+    let (_, doc, _) = create_did(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::FALCON_KEY_TYPE, JwsAlgorithm::FALCON512).await?;
+    if printing {
+      let a = doc.to_json_vec()?;
+      println!("{}", a.len());
+    }
+  }
+
+  println!("FALCON1024\n");
+  for _ in 0..n {
+    let (_, doc, _) = create_did(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::FALCON_KEY_TYPE, JwsAlgorithm::FALCON1024).await?;
+    if printing {
+      let a = doc.to_json_vec()?;
+      println!("{}", a.len());
+    }
+  }
 
   Ok(())
 }

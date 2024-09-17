@@ -55,7 +55,8 @@ use serde_json::json;
 // const FAUCET_ENDPOINT: &str = "http://localhost/faucet/api/enqueue";
 
 // The API endpoint of an IOTA node, e.g. Hornet.
-const API_ENDPOINT: &str = "http://192.168.94.191";
+// const API_ENDPOINT: &str = "http://192.168.94.191";
+pub static API_ENDPOINT: &str = "https://api.testnet.shimmer.network";
 // The faucet endpoint allows requesting funds for testing purposes.
 const FAUCET_ENDPOINT: &str = "https://faucet.testnet.shimmer.network/api/enqueue";
 
@@ -113,7 +114,7 @@ async fn main() -> anyhow::Result<()> {
   let storage_issuer: MemStorage = MemStorage::new(JwkMemStore::new(), KeyIdMemstore::new());
 
   let (_, issuer_document, fragment_issuer): (Address, IotaDocument, String) = 
-  create_did(&client, &mut secret_manager_issuer, &storage_issuer, JwkMemStore::ML_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_128s).await?;
+  create_did(&client, &mut secret_manager_issuer, &storage_issuer, JwkMemStore::ML_DSA_KEY_TYPE, JwsAlgorithm::ML_DSA_44).await?;
   println!("Published Issuer DID document: {issuer_document:#}");
 
   let mut secret_manager_holder = SecretManager::Stronghold(StrongholdSecretManager::builder()

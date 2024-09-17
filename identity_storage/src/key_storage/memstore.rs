@@ -4,12 +4,17 @@
 use core::fmt::Debug;
 use std::collections::HashMap;
 use std::fmt::Display;
+use tokio::fs::OpenOptions;
+use tokio::io::AsyncSeekExt;
+use tokio::io::AsyncWriteExt;
+use std::io::Write;
 use std::str::FromStr;
 use std::time::Duration;
 
 use async_trait::async_trait;
 use crypto::signatures::ed25519::SecretKey;
 use identity_core::common::Timestamp;
+use identity_core::convert::ToJson;
 use identity_verification::jose::jwk::EdCurve;
 use identity_verification::jose::jwk::Jwk;
 use identity_verification::jose::jwk::JwkType;
@@ -102,6 +107,8 @@ impl JwkStorage for JwkMemStore {
     let mut jwk_store: RwLockWriteGuard<'_, JwkKeyStore> = self.jwk_store.write().await;
     jwk_store.insert(kid.clone(), jwk);
 
+    println!("JWK: {}", public_jwk.to_json_vec().unwrap().len());
+
     Ok(JwkGenOutput::new(kid, public_jwk))
   }
 
@@ -187,8 +194,34 @@ impl JwkStorage for JwkMemStore {
       .ok_or_else(|| KeyStorageError::new(KeyStorageErrorKind::KeyNotFound))?;
     let secret_key = expand_secret_jwk(jwk)?;
 
-    println!("DATA: {}", data.len());
-    Ok(secret_key.sign(data).to_bytes().to_vec())
+    // println!("DATA: {}", data.len());
+    // let t = Instant::now();
+    let signature = secret_key.sign(data).to_bytes().to_vec();
+    // let elapsed = t.elapsed().as_micros();
+
+    // // Specify the file path
+    // let file_path = "signature.txt";
+
+    // // Open the file with write mode, create it if it doesn't exist
+    // let mut file = OpenOptions::new()
+    //     .write(true)
+    //     .create(true)
+    //     .open(file_path).await.unwrap();
+
+    // let value_str = format!("{}\n", elapsed.to_string());
+
+    //  // Move the cursor to the end of the file
+    // file.seek(tokio::io::SeekFrom::End(0)).await.unwrap();
+
+    // // Write a value to the file
+    // file.write_all(&value_str.as_bytes()).await.unwrap();
+    // // writeln!(file, "{}", elapsed).unwrap();
+
+    // // Flush the buffer to ensure the content is written immediately
+    // file.flush().await.unwrap();
+
+    
+    Ok(signature)
   }
 
   async fn delete(&self, key_id: &KeyId) -> KeyStorageResult<()> {
@@ -621,6 +654,8 @@ impl JwkStoragePQ for JwkMemStore {
     let mut jwk_store: RwLockWriteGuard<'_, JwkKeyStore> = self.jwk_store.write().await;
     jwk_store.insert(kid.clone(), jwk);
 
+    // println!("JWK: {}", public_jwk.to_json_vec().unwrap().len());
+
     Ok(JwkGenOutput::new(kid, public_jwk))
   }
 
@@ -693,13 +728,38 @@ impl JwkStoragePQ for JwkMemStore {
           .with_custom_message(format!("expected key of length {}", SecretKey::LENGTH))
     )?;
 
-    println!("DATA: {}", data.len());
+    // println!("DATA: {}", data.len());
+
+    // let t = Instant::now();
 
     let signature = scheme.sign(&data, secret_key).map_err(|err| {
       KeyStorageError::new(KeyStorageErrorKind::Unspecified)
         .with_custom_message(format!("signature computation failed"))
         .with_source(err)
     })?;
+
+    // let elapsed = t.elapsed().as_micros();
+
+    // // Specify the file path
+    // let file_path = "signature.txt";
+
+    // // Open the file with write mode, create it if it doesn't exist
+    // let mut file = OpenOptions::new()
+    //     .write(true)
+    //     .create(true)
+    //     .open(file_path).await.unwrap();
+
+    // let value_str = format!("{}\n", elapsed.to_string());
+
+    //  // Move the cursor to the end of the file
+    // file.seek(tokio::io::SeekFrom::End(0)).await.unwrap();
+
+    // // Write a value to the file
+    // file.write_all(&value_str.as_bytes()).await.unwrap();
+    // // writeln!(file, "{}", elapsed).unwrap();
+
+    // // Flush the buffer to ensure the content is written immediately
+    // file.flush().await.unwrap();
 
 
     Ok(signature.into_vec())

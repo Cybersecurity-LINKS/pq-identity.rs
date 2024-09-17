@@ -20,7 +20,7 @@ json-proof-token.workspace = true
 identity_pqc_verifier = { path = "../identity_pqc_verifier", default-features = true }
 
 [dev-dependencies]
-criterion = { version = "0.4", features = ["html_reports", "async_tokio"] }
+criterion = { version = "=0.4", features = ["html_reports", "async_tokio"] }
 
 [lib]
 path = "utils/utils.rs"
