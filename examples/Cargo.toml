@@ -1,19 +1,21 @@
 [package]
 name = "examples"
-version = "1.1.0-alpha.1"
+version = "1.3.1"
 authors = ["IOTA Stiftung"]
 edition = "2021"
 publish = false
 
 [dependencies]
 anyhow = "1.0.62"
+bls12_381_plus.workspace = true
 identity_eddsa_verifier = { path = "../identity_eddsa_verifier", default-features = false }
-identity_iota = { path = "../identity_iota", default-features = false, features = ["memstore", "domain-linkage", "revocation-bitmap", "status-list-2021"] }
-identity_stronghold = { path = "../identity_stronghold", default-features = false }
+identity_iota = { path = "../identity_iota", default-features = false, features = ["iota-client", "client", "memstore", "domain-linkage", "revocation-bitmap", "status-list-2021", "jpt-bbs-plus", "resolver"] }
+identity_stronghold = { path = "../identity_stronghold", default-features = false, features = ["bbs-plus"] }
 iota-sdk = { version = "1.0", default-features = false, features = ["tls", "client", "stronghold"] }
+json-proof-token.workspace = true
 primitive-types = "0.12.1"
 rand = "0.8.5"
-sd-jwt-payload = { version = "0.1.2", default-features = false, features = ["sha"] }
+sd-jwt-payload = { version = "0.2.1", default-features = false, features = ["sha"] }
 serde_json = { version = "1.0", default-features = false }
 tokio = { version = "1.29", default-features = false, features = ["rt"] }
 json-proof-token.workspace = true
@@ -110,13 +112,17 @@ path = "1_advanced/10_zkp_revocation.rs"
 name = "10_zkp_revocation"
 
 [[example]]
-path = "1_advanced/11_pqc.rs"
-name = "11_pqc"
+path = "1_advanced/11_linked_verifiable_presentation.rs"
+name = "11_linked_verifiable_presentation"
 
 [[example]]
-path = "1_advanced/12_pqc_did_create_test.rs"
-name = "12_pqc_did_create_test"
+path = "1_advanced/12_pqc.rs"
+name = "12_pqc"
 
 [[example]]
-path = "1_advanced/13_pqc_did_resolve_test.rs"
-name = "13_pqc_did_resolve_test"
+path = "1_advanced/13_pqc_did_create_test.rs"
+name = "13_pqc_did_create_test"
+
+[[example]]
+path = "1_advanced/14_pqc_did_resolve_test.rs"
+name = "14_pqc_did_resolve_test"
