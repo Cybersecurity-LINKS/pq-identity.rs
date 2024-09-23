@@ -1975,7 +1975,7 @@ fn benchmark_vc_verify_pq(c: &mut Criterion) {
   let tokio = tokio::runtime::Runtime::new().unwrap();
 
   let mut group2 = c.benchmark_group("VC (JWT) Verify");
-  group2.sample_size(50);
+  group2.sample_size(1000);
   group2.warm_up_time(Duration::from_secs(20));
 
 
@@ -2470,7 +2470,7 @@ fn benchmark_vp_verify_pq(c: &mut Criterion) {
 
   let tokio = tokio::runtime::Runtime::new().unwrap();
   let mut group = c.benchmark_group("VP (JWT) Verify");
-  group.sample_size(50);
+  group.sample_size(1000);
   group.warm_up_time(Duration::from_secs(20));
 
 
