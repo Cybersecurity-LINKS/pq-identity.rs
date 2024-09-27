@@ -92,6 +92,12 @@ pub enum JwsAlgorithm {
 
   FALCON512,
   FALCON1024,
+
+  #[serde(rename = "id-MLDSA44-Ed25519-SHA512")]
+  IdMldsa44Ed25519Sha512,
+
+  #[serde(rename = "id-MLDSA65-Ed25519-SHA512")]
+  IdMldsa65Ed25519Sha512,
   /// Custom algorithm
   #[cfg(feature = "custom_alg")]
   #[serde(untagged)]
@@ -127,7 +133,6 @@ impl JwsAlgorithm {
     Self::SLH_DSA_SHA2_128s,
     Self::SLH_DSA_SHAKE_128s,
     Self::SLH_DSA_SHA2_128f,
-
     Self::SLH_DSA_SHAKE_128f,
     Self::SLH_DSA_SHA2_192s,
     Self::SLH_DSA_SHAKE_192s,
@@ -137,10 +142,10 @@ impl JwsAlgorithm {
     Self::SLH_DSA_SHAKE_256s,
     Self::SLH_DSA_SHA2_256f,
     Self::SLH_DSA_SHAKE_256f,
-
     Self::FALCON512,
     Self::FALCON1024,
-
+    Self::IdMldsa44Ed25519Sha512,
+    Self::IdMldsa65Ed25519Sha512,
   ];
 
   /// Returns the JWS algorithm as a `str` slice.
@@ -181,6 +186,9 @@ impl JwsAlgorithm {
 
       Self::FALCON512 => "FALCON512",
       Self::FALCON1024 => "FALCON1024",
+
+      Self::IdMldsa44Ed25519Sha512 => "id-MLDSA44-Ed25519-SHA512",
+      Self::IdMldsa65Ed25519Sha512 => "id-MLDSA65-Ed25519-SHA512",
     }
   }
 
@@ -247,6 +255,9 @@ impl FromStr for JwsAlgorithm {
 
       "FALCON512" => Ok(Self::FALCON512),
       "FALCON1024" => Ok(Self::FALCON1024),
+
+      "id-MLDSA44-Ed25519-SHA512" => Ok(Self::IdMldsa44Ed25519Sha512),
+      "id-MLDSA65-Ed25519-SHA512" => Ok(Self::IdMldsa65Ed25519Sha512),
       #[cfg(feature = "custom_alg")]
       value => Ok(Self::Custom(value.to_string())),
       #[cfg(not(feature = "custom_alg"))]

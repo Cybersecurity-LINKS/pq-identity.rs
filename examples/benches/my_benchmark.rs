@@ -30,10 +30,12 @@ use identity_iota::credential::FailFast;
 use identity_iota::credential::Jwt;
 use identity_iota::credential::JwtCredentialValidationOptions;
 use identity_iota::credential::JwtCredentialValidator;
+use identity_iota::credential::JwtCredentialValidatorHybrid;
 use identity_iota::credential::JwtCredentialValidatorUtils;
 use identity_iota::credential::JwtPresentationOptions;
 use identity_iota::credential::JwtPresentationValidationOptions;
 use identity_iota::credential::JwtPresentationValidator;
+use identity_iota::credential::JwtPresentationValidatorHybrid;
 use identity_iota::credential::JwtPresentationValidatorUtils;
 use identity_iota::credential::Presentation;
 use identity_iota::credential::PresentationBuilder;
@@ -50,6 +52,7 @@ use identity_iota::iota::IotaIdentityClientExt;
 use identity_iota::iota::NetworkName;
 use identity_iota::resolver::Resolver;
 use identity_iota::storage::JwkDocumentExt;
+use identity_iota::storage::JwkDocumentExtHybrid;
 use identity_iota::storage::JwkMemStore;
 use identity_iota::storage::JwkStorage;
 use identity_iota::storage::JwsDocumentExtPQC;
@@ -58,6 +61,7 @@ use identity_iota::storage::KeyIdMemstore;
 use identity_iota::storage::KeyType;
 use identity_iota::storage::Storage;
 use identity_iota::verification::jws::JwsAlgorithm;
+use identity_iota::verification::CompositeAlgId;
 use identity_iota::verification::MethodScope;
 use identity_pqc_verifier::PQCJwsVerifier;
 use iota_sdk::client::secret::stronghold::StrongholdSecretManager;
@@ -79,8 +83,8 @@ use criterion::*;
 use criterion::async_executor::AsyncExecutor;
 
 // The API endpoint of an IOTA node, e.g. Hornet.
-const API_ENDPOINT: &str = "http://192.168.94.191";
-// const API_ENDPOINT: &str = "https://api.testnet.shimmer.network";
+// const API_ENDPOINT: &str = "http://192.168.94.191";
+const API_ENDPOINT: &str = "https://api.testnet.shimmer.network";
 // The faucet endpoint allows requesting funds for testing purposes.
 const FAUCET_ENDPOINT: &str = "http://faucet.testnet.shimmer.network/api/enqueue";
 
@@ -324,9 +328,8 @@ async fn setup(key_type: KeyType, alg: JwsAlgorithm) -> (CoreDocument, MemStorag
   let mut mock_document = CoreDocument::from_json(MOCK_DOCUMENT_JSON).unwrap();
   let storage = Storage::new(JwkMemStore::new(), KeyIdMemstore::new());
 
-
     let method_fragment = 
-    if alg == JwsAlgorithm::EdDSA && key_type == JwkMemStore::ED25519_KEY_TYPE {
+    if alg == JwsAlgorithm::EdDSA {
 
         mock_document.generate_method(
             &storage, 
@@ -335,7 +338,6 @@ async fn setup(key_type: KeyType, alg: JwsAlgorithm) -> (CoreDocument, MemStorag
             None, 
             MethodScope::VerificationMethod
         ).await.unwrap()
-
         } else {
         mock_document.generate_method_pqc(
             &storage, 
@@ -369,6 +371,115 @@ async fn setup(key_type: KeyType, alg: JwsAlgorithm) -> (CoreDocument, MemStorag
   let credential: Credential = Credential::from_json(credential_json).unwrap();
 
   (mock_document, storage, method_fragment, credential)
+}
+
+async fn setup_hybrid(alg_id: CompositeAlgId) -> (CoreDocument, MemStorage, String, Credential) {
+  let mut mock_document = CoreDocument::from_json(MOCK_DOCUMENT_JSON).unwrap();
+  let storage = Storage::new(JwkMemStore::new(), KeyIdMemstore::new());
+
+  let method_fragment = 
+    mock_document.generate_method_hybrid(&storage, alg_id, None, MethodScope::VerificationMethod).await.unwrap();
+
+  let credential_json: &str = r#"
+    {
+      "@context": [
+        "https://www.w3.org/2018/credentials/v1",
+        "https://www.w3.org/2018/credentials/examples/v1"
+      ],
+      "id": "http://example.edu/credentials/3732",
+      "type": ["VerifiableCredential", "UniversityDegreeCredential"],
+      "issuer": "did:bar:Hyx62wPQGyvXCoihZq1BrbUjBRh2LuNxWiiqMkfAuSZr",
+      "issuanceDate": "2010-01-01T19:23:24Z",
+      "credentialSubject": {
+        "id": "did:example:ebfeb1f712ebc6f1c276e12ec21",
+        "degree": {
+          "type": "BachelorDegree",
+          "name": "Bachelor of Science in Mechanical Engineering"
+        }
+      }
+    }"#;
+
+
+  let credential: Credential = Credential::from_json(credential_json).unwrap();
+
+  (mock_document, storage, method_fragment, credential)
+}
+
+
+fn benchmark_vc_create_hybrid(c: &mut Criterion) {
+  let tokio = tokio::runtime::Runtime::new().unwrap();
+  let mut group = c.benchmark_group("VC (JWT) Create - Hybrid");
+  group.sample_size(1000);
+  group.warm_up_time(Duration::from_nanos(1));
+
+
+  let mut jwt: Jwt;
+
+  let (document, storage, kid, credential) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_hybrid(CompositeAlgId::IdMldsa44Ed25519Sha512).await });
+
+  println!("VC size = {}", serde_json::to_vec(&credential).unwrap().len());
+  
+  group.bench_function("IdMldsa44Ed25519Sha512", |b| b.to_async(&tokio).iter(|| async {
+      document
+      .create_credential_jwt_hybrid(
+        &credential,
+        &storage,
+        kid.as_ref(),
+        &JwsSignatureOptions::default(),
+        None
+      )
+      .await.unwrap();
+
+      }
+  ));
+
+
+  jwt = tokio::runtime::Runtime::new().unwrap().block_on(async {document
+      .create_credential_jwt_hybrid(
+        &credential,
+        &storage,
+        kid.as_ref(),
+        &JwsSignatureOptions::default(),
+        None
+      )
+      .await.unwrap()
+  });
+
+  println!("IdMldsa44Ed25519Sha512 - VC (JWT) size = {}", jwt.as_str().as_bytes().len());
+
+
+  let (document, storage, kid, credential) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_hybrid(CompositeAlgId::IdMldsa65Ed25519Sha512).await });
+
+  println!("VC size = {}", serde_json::to_vec(&credential).unwrap().len());
+  
+  group.bench_function("IdMldsa65Ed25519Sha512", |b| b.to_async(&tokio).iter(|| async {
+      document
+      .create_credential_jwt_hybrid(
+        &credential,
+        &storage,
+        kid.as_ref(),
+        &JwsSignatureOptions::default(),
+        None
+      )
+      .await.unwrap();
+
+      }
+  ));
+
+
+  jwt = tokio::runtime::Runtime::new().unwrap().block_on(async {document
+      .create_credential_jwt_hybrid(
+        &credential,
+        &storage,
+        kid.as_ref(),
+        &JwsSignatureOptions::default(),
+        None
+      )
+      .await.unwrap()
+  });
+
+  println!("IdMldsa65Ed25519Sha512 - VC (JWT) size = {}", jwt.as_str().as_bytes().len());
+
 }
 
 
@@ -1196,6 +1307,93 @@ fn benchmark_vc_create(c: &mut Criterion) {
 
 
 
+async fn setup_presentation_hybrid(alg_id: CompositeAlgId) -> (CoreDocument, MemStorage, MemStorage, String, CoreDocument, String, Presentation<Jwt>, Client, Jwt) {
+  let client: Client = Client::builder()
+  .with_primary_node(API_ENDPOINT, None).unwrap()
+  .finish()
+  .await.unwrap();
+
+  
+  // Get the Bech32 human-readable part (HRP) of the network.
+  let network_name: NetworkName = client.network_name().await.unwrap();
+
+  // Create a new DID document with a placeholder DID.
+  // The DID will be derived from the Alias Id of the Alias Output after publishing.
+  let mut mock_document: IotaDocument = IotaDocument::new(&network_name);
+
+
+
+  let storage = Storage::new(JwkMemStore::new(), KeyIdMemstore::new());
+  let holder_storage = Storage::new(JwkMemStore::new(), KeyIdMemstore::new());
+
+
+    let method_fragment = mock_document.generate_method_hybrid(
+            &storage, 
+            alg_id,
+            None, 
+            MethodScope::VerificationMethod
+        ).await.unwrap();
+
+    // Create a new DID document with a placeholder DID.
+  // The DID will be derived from the Alias Id of the Alias Output after publishing.
+  let mut holder_document: IotaDocument = IotaDocument::new(&network_name);
+
+  let holder_fragment = holder_document.generate_method_hybrid(
+            &holder_storage, 
+            alg_id,
+            None, 
+            MethodScope::VerificationMethod
+        ).await.unwrap();
+  // println!("{:#}", mock_document);
+  
+
+
+
+      // Create a credential subject indicating the degree earned by Alice.
+  let subject: Subject = Subject::from_json_value(json!({
+    "id": holder_document.id().as_str(),
+    "degree": {
+      "type": "BachelorDegree",
+      "name": "Bachelor of Science and Arts",
+    },
+  })).unwrap();
+
+  // Build credential using subject above and issuer.
+  let credential: Credential = CredentialBuilder::default()
+    .id(Url::parse("https://example.edu/credentials/3732").unwrap())
+    .issuer(Url::parse(mock_document.id().as_str()).unwrap())
+    .type_("UniversityDegreeCredential")
+    .subject(subject)
+    .build().unwrap();
+
+
+  let vc_jwt = 
+    mock_document
+        .create_credential_jwt_hybrid(
+          &credential,
+          &storage,
+          &method_fragment,
+          &JwsSignatureOptions::default(),
+          None
+        )
+        .await.unwrap();
+
+
+  // ===========================================================================
+  // Step 5: Holder creates and signs a verifiable presentation from the issued credential.
+  // ===========================================================================
+
+  // Create an unsigned Presentation from the previously issued Verifiable Credential.
+  let presentation: Presentation<Jwt> =
+    PresentationBuilder::new(holder_document.id().to_url().into(), Default::default())
+      .credential(vc_jwt.clone())
+      .build().unwrap();
+
+
+
+  (mock_document.into(), storage, holder_storage, method_fragment, holder_document.into(), holder_fragment,presentation, client, vc_jwt)
+}
+
 
 
 async fn setup_presentation(key_type: KeyType, alg: JwsAlgorithm) -> (CoreDocument, MemStorage, MemStorage, String, CoreDocument, String, Presentation<Jwt>, Client, Jwt) {
@@ -1320,7 +1518,7 @@ async fn setup_presentation(key_type: KeyType, alg: JwsAlgorithm) -> (CoreDocume
 
   // Create an unsigned Presentation from the previously issued Verifiable Credential.
   let presentation: Presentation<Jwt> =
-    PresentationBuilder::new(mock_document.id().to_url().into(), Default::default())
+    PresentationBuilder::new(holder_document.id().to_url().into(), Default::default())
       .credential(vc_jwt.clone())
       .build().unwrap();
 
@@ -1329,6 +1527,90 @@ async fn setup_presentation(key_type: KeyType, alg: JwsAlgorithm) -> (CoreDocume
   (mock_document.into(), storage, holder_storage, method_fragment, holder_document.into(), holder_fragment,presentation, client, vc_jwt)
 }
 
+
+
+fn benchmark_vp_create_hybrid(c: &mut Criterion) {
+  // A unique random challenge generated by the requester per presentation can mitigate replay attacks.
+  let challenge: &str = "475a7984-1bb5-4c4c-a56f-822bccd46440";
+
+  // The verifier and holder also agree that the signature should have an expiry date
+  // 10 minutes from now.
+  let expires: Timestamp = Timestamp::now_utc().checked_add(Dur::minutes(10)).unwrap();
+
+
+  let tokio = tokio::runtime::Runtime::new().unwrap();
+  let mut group = c.benchmark_group("VP (JWT) Create - Hybrid");
+  group.sample_size(1000);
+  group.warm_up_time(Duration::from_secs(20));
+
+
+  let mut jwt: Jwt;
+
+  let (document, storage, _, kid, _, _,  presentation, _, _) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation_hybrid(CompositeAlgId::IdMldsa44Ed25519Sha512).await });
+  println!("VP size = {}", serde_json::to_vec(&presentation).unwrap().len());
+  
+
+  group.bench_function("IdMldsa44Ed25519Sha512", |b| b.to_async(&tokio).iter(|| async {
+      document
+      .create_presentation_jwt_hybrid(
+        &presentation,
+        &storage,
+        &kid,
+        &JwsSignatureOptions::default().nonce(challenge.to_owned()),
+        &JwtPresentationOptions::default().expiration_date(expires),
+      )
+      .await.unwrap()
+
+      }
+  ));
+
+  jwt = tokio::runtime::Runtime::new().unwrap().block_on(async {
+    document
+    .create_presentation_jwt_hybrid(
+      &presentation,
+      &storage,
+      &kid,
+      &JwsSignatureOptions::default().nonce(challenge.to_owned()),
+      &JwtPresentationOptions::default().expiration_date(expires),
+    )
+    .await.unwrap()
+  });
+
+  println!("IdMldsa44Ed25519Sha512 - VP (JWT) size = {}", jwt.as_str().as_bytes().len());
+
+  let (document, storage, _, kid, _, _,  presentation, _, _) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation_hybrid(CompositeAlgId::IdMldsa65Ed25519Sha512).await });
+  println!("VP size = {}", serde_json::to_vec(&presentation).unwrap().len());
+  
+
+  group.bench_function("IdMldsa65Ed25519Sha512", |b| b.to_async(&tokio).iter(|| async {
+      document
+      .create_presentation_jwt_hybrid(
+        &presentation,
+        &storage,
+        &kid,
+        &JwsSignatureOptions::default().nonce(challenge.to_owned()),
+        &JwtPresentationOptions::default().expiration_date(expires),
+      )
+      .await.unwrap()
+
+      }
+  ));
+
+  jwt = tokio::runtime::Runtime::new().unwrap().block_on(async {
+    document
+    .create_presentation_jwt_hybrid(
+      &presentation,
+      &storage,
+      &kid,
+      &JwsSignatureOptions::default().nonce(challenge.to_owned()),
+      &JwtPresentationOptions::default().expiration_date(expires),
+    )
+    .await.unwrap()
+  });
+
+  println!("IdMldsa65Ed25519Sha512 - VP (JWT) size = {}", jwt.as_str().as_bytes().len());
+
+}
 
 
 fn benchmark_vp_create(c: &mut Criterion) {
@@ -1873,103 +2155,71 @@ fn benchmark_vp_create(c: &mut Criterion) {
 }
 
 
+fn benchmark_vc_verify_hybrid(c: &mut Criterion) {
 
-fn benchmark_vp_verify(c: &mut Criterion) {
-  let (document, storage, fragment, presentation, client, presentation_jwt, challenge, expires) = tokio::runtime::Runtime::new().unwrap().block_on(async { 
-    let (document, storage, _, fragment, _, _, presentation, client, vc) = 
-    setup_presentation(JwkMemStore::ED25519_KEY_TYPE, JwsAlgorithm::EdDSA).await;
+
+  let tokio = tokio::runtime::Runtime::new().unwrap();
+
+  let mut group2 = c.benchmark_group("VC (JWT) Verify - Hybrid");
+  group2.sample_size(1000);
+  group2.warm_up_time(Duration::from_secs(20));
+
+
+  let (document, storage, fragment, holder_fragment, presentation, client, presentation_jwt, challenge, expires, vc) = tokio::runtime::Runtime::new().unwrap().block_on(async { 
+    let alg_id = CompositeAlgId::IdMldsa44Ed25519Sha512;
+    
+    let (document, storage, holder_storage, fragment, holder_document, holder_fragment, presentation, client, vc) = 
+    setup_presentation_hybrid(alg_id).await;
+
     // A unique random challenge generated by the requester per presentation can mitigate replay attacks.
     let challenge: &str = "475a7984-1bb5-4c4c-a56f-822bccd46440";
-
 
     // The verifier and holder also agree that the signature should have an expiry date
     // 10 minutes from now.
     let expires: Timestamp = Timestamp::now_utc().checked_add(Dur::minutes(10)).unwrap();
-
-    let secret_manager_holder = SecretManager::Stronghold(StrongholdSecretManager::builder()
-    .password(Password::from("secure_password_1".to_owned()))
-    .build(random_stronghold_path())
-    .unwrap());
-
-    // Get an address with funds for testing.
-    let address: Address = get_address_with_funds(&client, &secret_manager_holder, FAUCET_ENDPOINT).await.unwrap();
     
-    // Get the Bech32 human-readable part (HRP) of the network.
-    let network_name: NetworkName = client.network_name().await.unwrap();
-
-    let (_, holder_document, holder_fragment) = create_did(
-      &client, address, &network_name, &secret_manager_holder, &storage, JwkMemStore::ED25519_KEY_TYPE, JwsAlgorithm::EdDSA
-    ).await;
-
-    
-    let presentation_jwt = document.create_presentation_jwt(&presentation, &storage, &fragment, &JwsSignatureOptions::default().nonce(challenge.to_owned()),
+    let presentation_jwt = holder_document.create_presentation_jwt_hybrid(&presentation, &holder_storage, &holder_fragment, &JwsSignatureOptions::default().nonce(challenge.to_owned()),
     &JwtPresentationOptions::default().expiration_date(expires)).await.unwrap();
-    (document, storage, fragment, presentation, client, presentation_jwt, challenge, expires)
+    (document, storage, fragment, holder_fragment, presentation, client, presentation_jwt, challenge, expires, vc)
   });
 
-  let tokio = tokio::runtime::Runtime::new().unwrap();
-  let mut group = c.benchmark_group("VP (JWT) Verify");
-  group.sample_size(10);
-  group.warm_up_time(Duration::from_secs(3));
+  println!("VC size = {}", serde_json::to_vec(&vc).unwrap().len());
 
-  println!("VP size = {}", serde_json::to_vec(&presentation).unwrap().len());
-
-
-  group.bench_function("Ed25519", |b| b.to_async(&tokio).iter(|| async {
-      // vp_verify(challenge, &document, &holder_document, &presentation_jwt).await;
-      }
+  group2.bench_function("IdMldsa44Ed25519Sha512", |b| b.to_async(&tokio).iter(|| async {
+      vc_verify_hybrid(&document, &vc).await;
+    }
   ));
 
-  // jwt = tokio::runtime::Runtime::new().unwrap().block_on(async {
-  //   document
-  //   .create_presentation_jwt(
-  //     &presentation,
-  //     &storage,
-  //     &kid,
-  //     &JwsSignatureOptions::default().nonce(challenge.to_owned()),
-  //     &JwtPresentationOptions::default().expiration_date(expires),
-  //   )
-  //   .await.unwrap()
-  // });
 
-  // println!("Ed25519 - VP (JWT) size = {}", jwt.as_str().as_bytes().len());
+  let (document, storage, fragment, holder_fragment, presentation, client, presentation_jwt, challenge, expires, vc) = tokio::runtime::Runtime::new().unwrap().block_on(async { 
+    let alg_id = CompositeAlgId::IdMldsa65Ed25519Sha512;
+    
+    let (document, storage, holder_storage, fragment, holder_document, holder_fragment, presentation, client, vc) = 
+    setup_presentation_hybrid(alg_id).await;
 
+    // A unique random challenge generated by the requester per presentation can mitigate replay attacks.
+    let challenge: &str = "475a7984-1bb5-4c4c-a56f-822bccd46440";
 
-  // let (document, storage, kid, presentation) = tokio::runtime::Runtime::new().unwrap().block_on(async { setup_presentation(JwkMemStore::ML_DSA_KEY_TYPE, JwsAlgorithm::ML_DSA_44).await });
+    // The verifier and holder also agree that the signature should have an expiry date
+    // 10 minutes from now.
+    let expires: Timestamp = Timestamp::now_utc().checked_add(Dur::minutes(10)).unwrap();
+    
+    let presentation_jwt = holder_document.create_presentation_jwt_hybrid(&presentation, &holder_storage, &holder_fragment, &JwsSignatureOptions::default().nonce(challenge.to_owned()),
+    &JwtPresentationOptions::default().expiration_date(expires)).await.unwrap();
+    (document, storage, fragment, holder_fragment, presentation, client, presentation_jwt, challenge, expires, vc)
+  });
 
-  // group.bench_function("ML-DSA-44", |b| b.to_async(&tokio).iter(|| async {
-  //   document
-  //   .create_presentation_jwt_pqc(
-  //     &presentation,
-  //     &storage,
-  //     &kid,
-  //     &JwsSignatureOptions::default().nonce(challenge.to_owned()),
-  //     &JwtPresentationOptions::default().expiration_date(expires),
-  //   )
-  //   .await.unwrap()
+  println!("VC size = {}", serde_json::to_vec(&vc).unwrap().len());
 
-  //     }
-  // ));
-
-
-  // jwt = tokio::runtime::Runtime::new().unwrap().block_on(async {document
-  //   .create_presentation_jwt_pqc(
-  //     &presentation,
-  //     &storage,
-  //     &kid,
-  //     &JwsSignatureOptions::default().nonce(challenge.to_owned()),
-  //     &JwtPresentationOptions::default().expiration_date(expires),
-  //   )
-  //   .await.unwrap()
-  // });
-
-  // println!("ML-DSA-44 - VP (JWT) size = {}", jwt.as_str().as_bytes().len());
+  group2.bench_function("IdMldsa65Ed25519Sha512", |b| b.to_async(&tokio).iter(|| async {
+      vc_verify_hybrid(&document, &vc).await;
+    }
+  ));
 
 }
 
 
-
-fn benchmark_vc_verify_pq(c: &mut Criterion) {
+fn benchmark_vc_verify(c: &mut Criterion) {
 
 
   let tokio = tokio::runtime::Runtime::new().unwrap();
@@ -2465,12 +2715,71 @@ fn benchmark_vc_verify_pq(c: &mut Criterion) {
 }
 
 
-fn benchmark_vp_verify_pq(c: &mut Criterion) {
+
+fn benchmark_vp_verify_hybrid(c: &mut Criterion) {
+  let tokio = tokio::runtime::Runtime::new().unwrap();
+  let mut group = c.benchmark_group("VP (JWT) Verify - Hybrid");
+  group.sample_size(1000);
+  group.warm_up_time(Duration::from_secs(20));
+
+
+  let (document, storage, fragment, holder_document, holder_fragment, presentation, client, presentation_jwt, challenge, expires) = tokio::runtime::Runtime::new().unwrap().block_on(async { 
+    let alg_id = CompositeAlgId::IdMldsa44Ed25519Sha512;
+    
+    let (document, storage, holder_storage, fragment, holder_document, holder_fragment, presentation, client, vc) = 
+    setup_presentation_hybrid(alg_id).await;
+
+    // A unique random challenge generated by the requester per presentation can mitigate replay attacks.
+    let challenge: &str = "475a7984-1bb5-4c4c-a56f-822bccd46440";
+
+    // The verifier and holder also agree that the signature should have an expiry date
+    // 10 minutes from now.
+    let expires: Timestamp = Timestamp::now_utc().checked_add(Dur::minutes(10)).unwrap();
+    
+    let presentation_jwt = holder_document.create_presentation_jwt_hybrid(&presentation, &holder_storage, &holder_fragment, &JwsSignatureOptions::default().nonce(challenge.to_owned()),
+    &JwtPresentationOptions::default().expiration_date(expires)).await.unwrap();
+    (document, storage, fragment, holder_document.into(), holder_fragment, presentation, client, presentation_jwt, challenge, expires)
+  });
+
+  println!("VP size = {}", serde_json::to_vec(&presentation).unwrap().len());
+
+  group.bench_function("IdMldsa44Ed25519Sha512", |b| b.to_async(&tokio).iter(|| async {
+      vp_verify_hybrid(challenge, &document, &holder_document, &presentation_jwt).await;
+      }
+  ));
+
+  let (document, storage, fragment, holder_document, holder_fragment, presentation, client, presentation_jwt, challenge, expires) = tokio::runtime::Runtime::new().unwrap().block_on(async { 
+    let alg_id = CompositeAlgId::IdMldsa65Ed25519Sha512;
+    
+    let (document, storage, holder_storage, fragment, holder_document, holder_fragment, presentation, client, vc) = 
+    setup_presentation_hybrid(alg_id).await;
+
+    // A unique random challenge generated by the requester per presentation can mitigate replay attacks.
+    let challenge: &str = "475a7984-1bb5-4c4c-a56f-822bccd46440";
+
+    // The verifier and holder also agree that the signature should have an expiry date
+    // 10 minutes from now.
+    let expires: Timestamp = Timestamp::now_utc().checked_add(Dur::minutes(10)).unwrap();
+    
+    let presentation_jwt = holder_document.create_presentation_jwt_hybrid(&presentation, &holder_storage, &holder_fragment, &JwsSignatureOptions::default().nonce(challenge.to_owned()),
+    &JwtPresentationOptions::default().expiration_date(expires)).await.unwrap();
+    (document, storage, fragment, holder_document.into(), holder_fragment, presentation, client, presentation_jwt, challenge, expires)
+  });
+
+  println!("VP size = {}", serde_json::to_vec(&presentation).unwrap().len());
+
+  group.bench_function("IdMldsa65Ed25519Sha512", |b| b.to_async(&tokio).iter(|| async {
+      vp_verify_hybrid(challenge, &document, &holder_document, &presentation_jwt).await;
+      }
+  ));
+}
+
+fn benchmark_vp_verify(c: &mut Criterion) {
 
 
   let tokio = tokio::runtime::Runtime::new().unwrap();
   let mut group = c.benchmark_group("VP (JWT) Verify");
-  group.sample_size(1000);
+  group.sample_size(10);
   group.warm_up_time(Duration::from_secs(20));
 
 
@@ -2974,6 +3283,18 @@ fn benchmark_vp_verify_pq(c: &mut Criterion) {
 
 }
 
+async fn vc_verify_hybrid(document: &CoreDocument, credential_jwt: &Jwt) {
+
+  let _decoded_credential: DecodedJwtCredential<Object> = JwtCredentialValidatorHybrid::with_signature_verifiers(EdDSAJwsVerifier::default(), PQCJwsVerifier::default())
+    .validate::<_, Object>(
+      &credential_jwt,
+      &document,
+      &JwtCredentialValidationOptions::default(),
+      FailFast::FirstError,
+    )
+    .unwrap();
+
+}
 
 async fn vc_verify_pq(document: &CoreDocument, credential_jwt: &Jwt) {
 
@@ -2985,6 +3306,52 @@ async fn vc_verify_pq(document: &CoreDocument, credential_jwt: &Jwt) {
       FailFast::FirstError,
     )
     .unwrap();
+
+}
+
+
+async fn vp_verify_hybrid(challenge: &str, document: &CoreDocument, holder_document: &CoreDocument, presentation_jwt: &Jwt) {
+  let presentation_verifier_options: JwsVerificationOptions =
+    JwsVerificationOptions::default().nonce(challenge.to_owned());
+
+  // let mut resolver: Resolver<IotaDocument> = Resolver::new();
+  // resolver.attach_iota_handler(client);
+
+  // Resolve the holder's document.
+  let holder_did: CoreDID = JwtPresentationValidatorUtils::extract_holder(&presentation_jwt).unwrap();
+  // let holder: IotaDocument = resolver.resolve(&holder_did).await.unwrap();
+
+  // Validate presentation. Note that this doesn't validate the included credentials.
+  let presentation_validation_options =
+    JwtPresentationValidationOptions::default().presentation_verifier_options(presentation_verifier_options);
+  let presentation: DecodedJwtPresentation<Jwt> = JwtPresentationValidatorHybrid::with_signature_verifiers(
+    EdDSAJwsVerifier::default(),
+    PQCJwsVerifier::default(),
+  )
+  .validate(&presentation_jwt, &holder_document, &presentation_validation_options).unwrap();
+
+  // Concurrently resolve the issuers' documents.
+  let jwt_credentials: &Vec<Jwt> = &presentation.presentation.verifiable_credential;
+  // let issuers: Vec<CoreDID> = jwt_credentials
+  //   .iter()
+  //   .map(JwtCredentialValidatorUtils::extract_issuer_from_jwt)
+  //   .collect::<Result<Vec<CoreDID>, _>>().unwrap();
+  // let issuers_documents: HashMap<CoreDID, IotaDocument> = resolver.resolve_multiple(&issuers).await.unwrap();
+
+  // Validate the credentials in the presentation.
+  let credential_validator: JwtCredentialValidatorHybrid<EdDSAJwsVerifier, PQCJwsVerifier> =
+    JwtCredentialValidatorHybrid::with_signature_verifiers(EdDSAJwsVerifier::default(), PQCJwsVerifier::default());
+  let validation_options: JwtCredentialValidationOptions = JwtCredentialValidationOptions::default()
+    .subject_holder_relationship(holder_did.to_url().into(), SubjectHolderRelationship::AlwaysSubject);
+
+  for (index, jwt_vc) in jwt_credentials.iter().enumerate() {
+    // SAFETY: Indexing should be fine since we extracted the DID from each credential and resolved it.
+    // let issuer_document: &IotaDocument = &issuers_documents[&issuers[index]];
+
+    let _decoded_credential: DecodedJwtCredential<Object> = credential_validator
+      .validate::<_, Object>(jwt_vc, document, &validation_options, FailFast::FirstError)
+      .unwrap();
+  }
 
 }
 
@@ -3094,14 +3461,282 @@ async fn vp_verify(challenge: &str, document: &CoreDocument, holder_document: &C
 
 }
 
-criterion_group!(vc_vp_verify_benches, benchmark_vc_verify_pq, benchmark_vp_verify_pq);
+
+
+async fn create_did_hybrid(client: &Client, address: Address, network_name: &NetworkName, secret_manager: &SecretManager, storage: &MemStorage, alg_id: CompositeAlgId) -> anyhow::Result<()> {
+
+  // Create a new DID document with a placeholder DID.
+  // The DID will be derived from the Alias Id of the Alias Output after publishing.
+  let mut document: IotaDocument = IotaDocument::new(&network_name);
+
+  // New Verification Method containing a PQC key
+  let fragment = 
+    document.generate_method_hybrid(
+        &storage, 
+        alg_id, 
+        None, 
+        MethodScope::VerificationMethod
+    ).await.unwrap();
+
+  // Construct an Alias Output containing the DID document, with the wallet address
+  // set as both the state controller and governor.
+  let alias_output: AliasOutput = client.new_did_output(address, document, None).await?;
+
+  // Publish the Alias Output and get the published DID document.
+  // let document: IotaDocument = client.publish_did_output(&secret_manager, alias_output).await?;
+
+
+  Ok(())
+}
+
+async fn create_did_fn(client: &Client, address: Address, network_name: &NetworkName, secret_manager: &SecretManager, storage: &MemStorage, key_type: KeyType, alg: JwsAlgorithm) -> anyhow::Result<()> {
+
+  // Create a new DID document with a placeholder DID.
+  // The DID will be derived from the Alias Id of the Alias Output after publishing.
+  let mut document: IotaDocument = IotaDocument::new(&network_name);
+
+  // New Verification Method containing a PQC key
+// New Verification Method containing a PQC key
+let fragment = if alg == JwsAlgorithm::EdDSA && key_type == JwkMemStore::ED25519_KEY_TYPE {
+  
+  document.generate_method(
+      &storage, 
+      key_type, 
+      alg, 
+      None, 
+      MethodScope::VerificationMethod
+  ).await.unwrap()
+
+} else {
+  document.generate_method_pqc(
+      &storage, 
+      key_type, 
+      alg, 
+      None, 
+      MethodScope::VerificationMethod
+  ).await.unwrap()
+
+};
+
+  // Construct an Alias Output containing the DID document, with the wallet address
+  // set as both the state controller and governor.
+  let alias_output: AliasOutput = client.new_did_output(address, document, None).await?;
+
+  // Publish the Alias Output and get the published DID document.
+  // let document: IotaDocument = client.publish_did_output(&secret_manager, alias_output).await?;
+
+
+  Ok(())
+}
+
+fn benchmark_create_document_hybrid(c: &mut Criterion) {
+  let tokio = tokio::runtime::Runtime::new().unwrap();
+
+  let mut group = c.benchmark_group("DID Create - Hybrid");
+  group.sample_size(1000);
+  group.warm_up_time(Duration::from_secs(20));
+
+
+  let (client, address, network_name, secret_manager_issuer, storage_issuer) = tokio::runtime::Runtime::new().unwrap().block_on(async { 
+
+  // ===========================================================================
+  // Step 1: Create identitiy for the issuer.
+  // ===========================================================================
+
+  // Create a new client to interact with the IOTA ledger.
+  let client: Client = Client::builder()
+    .with_primary_node(API_ENDPOINT, None).unwrap()
+    .finish()
+    .await.unwrap();
+
+
+  let secret_manager_issuer = SecretManager::Stronghold(StrongholdSecretManager::builder()
+  .password(Password::from("secure_password_1".to_owned()))
+  .build(random_stronghold_path()).unwrap());
+
+  let storage_issuer: MemStorage = MemStorage::new(JwkMemStore::new(), KeyIdMemstore::new());
+
+  // Get an address with funds for testing.
+  let address: Address = get_address_with_funds(&client, &secret_manager_issuer, FAUCET_ENDPOINT).await.unwrap();
+
+  // Get the Bech32 human-readable part (HRP) of the network.
+  let network_name: NetworkName = client.network_name().await.unwrap();
+
+  (client, address, network_name, secret_manager_issuer, storage_issuer)
+
+  });
+
+  group.bench_function("IdMldsa44Ed25519Sha512", |b| b.to_async(&tokio).iter(|| async {
+    create_did_hybrid(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, CompositeAlgId::IdMldsa44Ed25519Sha512).await.unwrap();
+    }
+  ));
+
+  group.bench_function("IdMldsa65Ed25519Sha512", |b| b.to_async(&tokio).iter(|| async {
+    create_did_hybrid(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, CompositeAlgId::IdMldsa65Ed25519Sha512).await.unwrap();
+    }
+  ));
+
+
+}
+
+fn benchmark_create_document(c: &mut Criterion) {
+  let tokio = tokio::runtime::Runtime::new().unwrap();
+
+  let mut group = c.benchmark_group("DID Create");
+  group.sample_size(1000);
+  group.warm_up_time(Duration::from_secs(20));
+
+
+  let (client, address, network_name, secret_manager_issuer, storage_issuer) = tokio::runtime::Runtime::new().unwrap().block_on(async { 
+
+  // ===========================================================================
+  // Step 1: Create identitiy for the issuer.
+  // ===========================================================================
+
+  // Create a new client to interact with the IOTA ledger.
+  let client: Client = Client::builder()
+    .with_primary_node(API_ENDPOINT, None).unwrap()
+    .finish()
+    .await.unwrap();
+
+
+  let secret_manager_issuer = SecretManager::Stronghold(StrongholdSecretManager::builder()
+  .password(Password::from("secure_password_1".to_owned()))
+  .build(random_stronghold_path()).unwrap());
+
+  let storage_issuer: MemStorage = MemStorage::new(JwkMemStore::new(), KeyIdMemstore::new());
+
+  // Get an address with funds for testing.
+  let address: Address = get_address_with_funds(&client, &secret_manager_issuer, FAUCET_ENDPOINT).await.unwrap();
+
+  // Get the Bech32 human-readable part (HRP) of the network.
+  let network_name: NetworkName = client.network_name().await.unwrap();
+
+  (client, address, network_name, secret_manager_issuer, storage_issuer)
+
+  });
+
+  group.bench_function("Ed25519", |b| b.to_async(&tokio).iter(|| async {
+    create_did_fn(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::ED25519_KEY_TYPE, JwsAlgorithm::EdDSA).await.unwrap();
+    }
+));
+
+
+group.bench_function("ML-DSA-44", |b| b.to_async(&tokio).iter(|| async {
+  create_did_fn(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::ML_DSA_KEY_TYPE, JwsAlgorithm::ML_DSA_44).await.unwrap();
+    }
+));
+
+
+group.bench_function("ML-DSA-65", |b| b.to_async(&tokio).iter(|| async {
+  create_did_fn(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::ML_DSA_KEY_TYPE, JwsAlgorithm::ML_DSA_65).await.unwrap();
+    }
+));
+
+
+group.bench_function("ML-DSA-87", |b| b.to_async(&tokio).iter(|| async {
+  create_did_fn(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::ML_DSA_KEY_TYPE, JwsAlgorithm::ML_DSA_87).await.unwrap();
+    }
+));
+
+group.bench_function("SLH-DSA-SHA2-128s", |b| b.to_async(&tokio).iter(|| async {
+  create_did_fn(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_128s).await.unwrap();
+    }
+));
+
+
+group.bench_function("SLH-DSA-SHAKE-128s", |b| b.to_async(&tokio).iter(|| async {
+  create_did_fn(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_128s).await.unwrap();
+    }
+));
+
+
+group.bench_function("SLH-DSA-SHA2-128f", |b| b.to_async(&tokio).iter(|| async {
+  create_did_fn(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_128f).await.unwrap();
+    }
+));
+
+
+group.bench_function("SLH-DSA-SHAKE-128f", |b| b.to_async(&tokio).iter(|| async {
+  create_did_fn(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_128f).await.unwrap();
+    }
+));
+
+
+group.bench_function("SLH-DSA-SHA2-192s", |b| b.to_async(&tokio).iter(|| async {
+  create_did_fn(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_192s).await.unwrap();
+    }
+));
+
+group.bench_function("SLH-DSA-SHAKE-192s", |b| b.to_async(&tokio).iter(|| async {
+  create_did_fn(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_192s).await.unwrap();
+    }
+));
+
+group.bench_function("SLH-DSA-SHA2-192f", |b| b.to_async(&tokio).iter(|| async {
+  create_did_fn(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_192f).await.unwrap();
+    }
+));
+
+
+group.bench_function("SLH-DSA-SHAKE-192f", |b| b.to_async(&tokio).iter(|| async {
+  create_did_fn(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_192f).await.unwrap();
+    }
+));
+
+
+group.bench_function("SLH-DSA-SHA2-256s", |b| b.to_async(&tokio).iter(|| async {
+  create_did_fn(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_256s).await.unwrap();
+    }
+));
+
+group.bench_function("SLH-DSA-SHAKE-256s", |b| b.to_async(&tokio).iter(|| async {
+  create_did_fn(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_256s).await.unwrap();
+    }
+));
+
+
+group.bench_function("SLH-DSA-SHA2-256f", |b| b.to_async(&tokio).iter(|| async {
+  create_did_fn(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHA2_256f).await.unwrap();
+    }
+));
+
+
+group.bench_function("SLH-DSA-SHAKE-256f", |b| b.to_async(&tokio).iter(|| async {
+  create_did_fn(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::SLH_DSA_KEY_TYPE, JwsAlgorithm::SLH_DSA_SHAKE_256f).await.unwrap();
+    }
+));
+
+
+group.bench_function("FALCON512", |b| b.to_async(&tokio).iter(|| async {
+  create_did_fn(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::FALCON_KEY_TYPE, JwsAlgorithm::FALCON512).await.unwrap();
+    }
+));
+
+
+group.bench_function("FALCON1024", |b| b.to_async(&tokio).iter(|| async {
+  create_did_fn(&client, address, &network_name, &secret_manager_issuer, &storage_issuer, JwkMemStore::FALCON_KEY_TYPE, JwsAlgorithm::FALCON1024).await.unwrap();
+    }
+));
+
+
+}
+
+criterion_group!(vc_vp_verify_benches, benchmark_vc_verify, benchmark_vp_verify);
 
 criterion_group!(vp_create_benches, benchmark_vp_create);
 
 criterion_group!(vc_create_benches, benchmark_vc_create);
 
-criterion_group!(vc_vp_create_benches, benchmark_vc_create, benchmark_vp_create, benchmark_vp_verify_pq);
+criterion_group!(vp_verify_benches, benchmark_vp_verify);
 
-criterion_group!(benches, criterion_benchmark, benchmark_vc_create);
+criterion_group!(vc_vp_create_benches, benchmark_vc_create, benchmark_vp_create, benchmark_vp_verify);
 
-criterion_main!(vc_vp_verify_benches);
+criterion_group!(benches, criterion_benchmark, benchmark_vc_verify);
+
+criterion_group!(hybrid_benches, /* benchmark_vc_create_hybrid, benchmark_vp_create_hybrid, benchmark_vc_verify_hybrid, */ benchmark_vp_verify_hybrid);
+
+criterion_group!(document_benches, benchmark_create_document, benchmark_create_document_hybrid);
+
+
+criterion_main!(document_benches);
