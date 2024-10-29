@@ -1,12 +1,9 @@
-// Copyright 2020-2024 IOTA Stiftung
-// SPDX-License-Identifier: Apache-2.0
-
 use jsonprooftoken::jpa::algs::ProofAlgorithm;
 use wasm_bindgen::prelude::*;
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[wasm_bindgen(js_name = ProofAlgorithm)]
+#[wasm_bindgen]
 pub enum WasmProofAlgorithm {
   BLS12381_SHA256,
   BLS12381_SHAKE256,

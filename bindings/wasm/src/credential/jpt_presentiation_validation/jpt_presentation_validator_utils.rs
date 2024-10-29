@@ -1,6 +1,3 @@
-// Copyright 2020-2024 IOTA Stiftung
-// SPDX-License-Identifier: Apache-2.0
-
 use crate::common::WasmTimestamp;
 use crate::credential::options::WasmStatusCheck;
 use crate::credential::WasmCredential;

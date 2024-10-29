@@ -1,6 +1,3 @@
-// Copyright 2020-2024 IOTA Stiftung
-// SPDX-License-Identifier: Apache-2.0
-
 use identity_iota::credential::Jpt;
 use wasm_bindgen::prelude::*;
 
@@ -36,10 +33,4 @@ impl From<WasmJpt> for Jpt {
   fn from(value: WasmJpt) -> Self {
     value.0
   }
-}
-
-#[wasm_bindgen]
-extern "C" {
-  #[wasm_bindgen(typescript_type = "Promise<Jpt>")]
-  pub type PromiseJpt;
 }

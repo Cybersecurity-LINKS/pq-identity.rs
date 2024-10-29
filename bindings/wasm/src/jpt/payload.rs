@@ -1,6 +1,3 @@
-// Copyright 2020-2024 IOTA Stiftung
-// SPDX-License-Identifier: Apache-2.0
-
 use crate::error::Result;
 use crate::error::WasmError;
 use crate::error::WasmResult;
@@ -39,10 +36,10 @@ impl From<PayloadType> for WasmPayloadType {
   }
 }
 
-#[wasm_bindgen(js_name = PayloadEntry)]
+#[wasm_bindgen]
 pub struct WasmPayloadEntry(JsValue, pub WasmPayloadType);
 
-#[wasm_bindgen(js_class = PayloadEntry)]
+#[wasm_bindgen]
 impl WasmPayloadEntry {
   #[wasm_bindgen(setter)]
   pub fn set_value(&mut self, value: JsValue) {
@@ -72,7 +69,7 @@ impl WasmPayloads {
       .map(WasmPayloads)
   }
 
-  #[wasm_bindgen(js_name = newFromValues)]
+  #[wasm_bindgen(constructor)]
   pub fn new_from_values(values: Vec<JsValue>) -> Result<WasmPayloads> {
     let values = values
       .into_iter()

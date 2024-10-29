@@ -1,4 +1,3 @@
-import { encode as base64Encode } from "base64-arraybuffer";
 import type { KeyIdStorage, MethodDigest } from "~identity_wasm";
 
 export class KeyIdMemStore implements KeyIdStorage {
@@ -49,5 +48,6 @@ export class KeyIdMemStore implements KeyIdStorage {
  */
 function methodDigestToString(methodDigest: MethodDigest): string {
     let arrayBuffer = methodDigest.pack().buffer;
-    return base64Encode(arrayBuffer);
+    let buffer = Buffer.from(arrayBuffer);
+    return buffer.toString("base64");
 }

@@ -1,6 +1,3 @@
-// Copyright 2020-2024 IOTA Stiftung
-// SPDX-License-Identifier: Apache-2.0
-
 use super::WasmJwpIssued;
 use super::WasmPresentationProtectedHeader;
 use crate::error::Result;

@@ -1,6 +1,3 @@
-// Copyright 2020-2024 IOTA Stiftung, Fondazione Links
-// SPDX-License-Identifier: Apache-2.0
-
 use std::str::FromStr;
 
 use identity_core::common::Object;

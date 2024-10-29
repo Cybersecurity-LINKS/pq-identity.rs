@@ -1,6 +1,3 @@
-// Copyright 2020-2024 IOTA Stiftung
-// SPDX-License-Identifier: Apache-2.0
-
 use jsonprooftoken::jwp::issued::JwpIssued;
 use wasm_bindgen::prelude::*;
 
@@ -8,7 +5,6 @@ use super::WasmPayloads;
 use super::WasmSerializationType;
 use crate::error::Result;
 use crate::error::WasmResult;
-use crate::jpt::WasmIssuerProtectedHeader;
 
 #[wasm_bindgen(js_name = JwpIssued)]
 pub struct WasmJwpIssued(pub(crate) JwpIssued);
@@ -41,10 +37,5 @@ impl WasmJwpIssued {
   #[wasm_bindgen(js_name = "setPayloads")]
   pub fn set_payloads(&mut self, payloads: WasmPayloads) {
     self.0.set_payloads(payloads.into())
-  }
-
-  #[wasm_bindgen(js_name = getIssuerProtectedHeader)]
-  pub fn get_issuer_protected_header(&self) -> WasmIssuerProtectedHeader {
-    self.0.get_issuer_protected_header().clone().into()
   }
 }

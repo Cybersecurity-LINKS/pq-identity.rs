@@ -1,6 +1,3 @@
-// Copyright 2020-2024 IOTA Stiftung, Fondazione Links
-// SPDX-License-Identifier: Apache-2.0
-
 use examples::get_address_with_funds;
 use examples::random_stronghold_path;
 use examples::MemStorage;
@@ -161,17 +158,17 @@ async fn main() -> anyhow::Result<()> {
   );
 
   // ============================================================================================
-  // Step 4: Holder resolves Issuer's DID, retrieve Issuer's document and validate the Credential
+  // Step 4: Holder resolve Issuer's DID, retrieve Issuer's document and validate the Credential
   // ============================================================================================
 
   let mut resolver: Resolver<IotaDocument> = Resolver::new();
   resolver.attach_iota_handler(client);
 
-  // Holder resolves issuer's DID
+  // Holder resolve Issuer DID
   let issuer: CoreDID = JptCredentialValidatorUtils::extract_issuer_from_issued_jpt(&credential_jpt).unwrap();
   let issuer_document: IotaDocument = resolver.resolve(&issuer).await?;
 
-  // Holder validates the credential and retrieve the JwpIssued, needed to construct the JwpPresented
+  // Holder validate the credential and retrieve the JwpIssued, needed to construct the JwpPresented
   let decoded_credential = JptCredentialValidator::validate::<_, Object>(
     &credential_jpt,
     &issuer_document,

@@ -52,7 +52,7 @@ mod tests {
     assert_eq!(proof.type_, "test-proof");
     let value = proof
       .properties
-      .get("signature")
+      .get(&"signature".to_owned())
       .expect("property in proof doesn't exist");
     assert_eq!(value, "abc123");
   }
@@ -88,7 +88,7 @@ mod tests {
     assert_eq!(proof.type_, "RsaSignature2018");
     let value = proof
       .properties
-      .get("proofPurpose")
+      .get(&"proofPurpose".to_owned())
       .expect("property in proof doesn't exist");
     assert_eq!(value, "assertionMethod");
     assert_eq!(proof.properties.len(), 4);

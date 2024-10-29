@@ -105,12 +105,6 @@ pub struct JwtHeader {
   nonce: Option<String>,
 }
 
-impl Default for JwtHeader {
-  fn default() -> Self {
-    Self::new()
-  }
-}
-
 impl JwtHeader {
   /// Create a new `JwtHeader`.
   pub const fn new() -> Self {

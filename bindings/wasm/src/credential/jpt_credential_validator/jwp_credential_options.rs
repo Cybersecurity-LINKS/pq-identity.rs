@@ -1,6 +1,3 @@
-// Copyright 2020-2024 IOTA Stiftung
-// SPDX-License-Identifier: Apache-2.0
-
 use crate::error::Result;
 use crate::error::WasmResult;
 use identity_iota::credential::JwpCredentialOptions;
@@ -8,13 +5,15 @@ use serde::Deserialize;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
-#[wasm_bindgen(js_name = JwpCredentialOptions, getter_with_clone, inspectable)]
+#[wasm_bindgen(inspectable)]
 #[derive(Serialize, Deserialize, Default)]
 pub struct WasmJwpCredentialOptions {
+  #[wasm_bindgen(getter_with_clone)]
+  #[serde(skip_serializing_if = "Option::is_none")]
   pub kid: Option<String>,
 }
 
-#[wasm_bindgen(js_class = JwpCredentialOptions)]
+#[wasm_bindgen]
 impl WasmJwpCredentialOptions {
   #[wasm_bindgen(constructor)]
   pub fn new() -> WasmJwpCredentialOptions {

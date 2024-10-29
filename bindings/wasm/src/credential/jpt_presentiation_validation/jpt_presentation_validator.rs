@@ -1,12 +1,9 @@
-// Copyright 2020-2024 IOTA Stiftung
-// SPDX-License-Identifier: Apache-2.0
-
 use crate::common::ImportedDocumentLock;
 use crate::credential::WasmDecodedJptPresentation;
 use crate::credential::WasmFailFast;
 use crate::credential::WasmJpt;
 use crate::credential::WasmJptPresentationValidationOptions;
-use crate::did::IToCoreDocument;
+use crate::did::WasmCoreDocument;
 use crate::error::Result;
 use crate::error::WasmResult;
 use identity_iota::credential::JptPresentationValidator;
@@ -28,13 +25,13 @@ impl WasmJptPresentationValidator {
   #[wasm_bindgen]
   pub fn validate(
     presentation_jpt: &WasmJpt,
-    issuer: &IToCoreDocument,
+    issuer: WasmCoreDocument,
     options: &WasmJptPresentationValidationOptions,
     fail_fast: WasmFailFast,
   ) -> Result<WasmDecodedJptPresentation> {
-    let issuer_lock = ImportedDocumentLock::from(issuer);
-    let issuer_guard = issuer_lock.try_read()?;
-    JptPresentationValidator::validate(&presentation_jpt.0, &issuer_guard, &options.0, fail_fast.into())
+    let issuer_doc = ImportedDocumentLock::Core(issuer.0);
+    let doc = issuer_doc.try_read()?;
+    JptPresentationValidator::validate(&presentation_jpt.0, &doc, &options.0, fail_fast.into())
       .wasm_result()
       .map(WasmDecodedJptPresentation)
   }

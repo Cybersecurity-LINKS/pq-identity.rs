@@ -1,6 +1,3 @@
-// Copyright 2020-2024 IOTA Stiftung, Fondazione Links
-// SPDX-License-Identifier: Apache-2.0
-
 use std::str::FromStr;
 
 use identity_core::common::Url;
@@ -171,7 +168,7 @@ impl JptPresentationValidator {
   where
     T: ToOwned<Owned = T> + serde::Serialize + serde::de::DeserializeOwned,
   {
-    // Verify Jwp proof
+    //Verify Jwp proof
     let decoded_jwp = decoded
       .verify(public_key)
       .map_err(JwtValidationError::JwpProofVerificationError)?;

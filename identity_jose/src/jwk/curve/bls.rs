@@ -1,6 +1,3 @@
-// Copyright 2020-2024 IOTA Stiftung, Fondazione Links
-// SPDX-License-Identifier: Apache-2.0
-
 use core::fmt::Display;
 use core::fmt::Formatter;
 use core::fmt::Result;
